@@ -60,7 +60,6 @@ create_test_file() {
     local TEST_FILE="${TEST_DIR}/backup-$(date +%Y%m%d_%H%M%S).txt"
     echo "ASIP Hybrid Storage Test - $(date)" > "${TEST_FILE}"
     echo "This file demonstrates hybrid on-prem → S3 backup." >> "${TEST_FILE}"
-    log "Created test file: ${TEST_FILE}"
     echo "${TEST_FILE}"
 }
 
