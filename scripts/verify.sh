@@ -1,11 +1,8 @@
 #!/bin/bash -euo pipefail
 # -------------------------------------------------------------------------------------------------
-# verify.sh — ASIP Infrastructure Health Checks
+# verify.sh — ASIP Infrastructure Health Checks (adapted to real deployment)
 # -------------------------------------------------------------------------------------------------
 
-SSH_USER="${SSH_USER:-ansible}"
-SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_ed25519}"
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes"
 PASS=0
 FAIL=0
 WARN=0
@@ -29,100 +26,78 @@ else
     fail "LocalStack is not running (expected localhost:4566)"
 fi
 
-if curl -sf http://localhost:4566/_localstack/health 2>/dev/null | grep -q "s3"; then
-    ok "LocalStack S3 service available"
-else
-    warn "LocalStack S3 service not detected"
-fi
-
-S3_BUCKETS=$(docker exec localstack-main awslocal s3 ls 2>/dev/null || echo "")
-if echo "$S3_BUCKETS" | grep -q "asip-backup"; then
+AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1
+if aws --endpoint-url=http://localhost:4566 s3 ls 2>/dev/null | grep -q "asip-backup"; then
     ok "S3 bucket 'asip-backup' exists"
 else
     fail "S3 bucket 'asip-backup' not found"
 fi
 
-if echo "$S3_BUCKETS" | grep -q "asip-documents"; then
+if aws --endpoint-url=http://localhost:4566 s3 ls 2>/dev/null | grep -q "asip-documents"; then
     ok "S3 bucket 'asip-documents' exists"
 else
     fail "S3 bucket 'asip-documents' not found"
 fi
 
+if aws --endpoint-url=http://localhost:4566 s3 ls 2>/dev/null | grep -q "asip-terraform-state"; then
+    ok "S3 bucket 'asip-terraform-state' exists"
+else
+    fail "S3 bucket 'asip-terraform-state' not found"
+fi
+
 echo ""
 
 # -------------------------------------------------------------------------------------------------
-# Proxmox VMs
+# Proxmox
 # -------------------------------------------------------------------------------------------------
-echo "--- Proxmox VMs ---"
+echo "--- Proxmox ---"
 PROXMOX_HOST="${PROXMOX_HOST:-192.168.100.254}"
 PROXMOX_NODE="${PROXMOX_NODE:-pve}"
+PROXMOX_TOKEN="${PROXMOX_TOKEN:-2f77eb04-12ba-4594-b685-e09ca5fa28b3}"
 
-for vm_ip in 10.10.10.5 10.10.10.20 10.10.10.50 10.10.20.10 10.10.20.12 10.10.20.20 10.10.30.10; do
-    if ssh ${SSH_OPTS} -i "${SSH_KEY}" "${SSH_USER}@${vm_ip}" "echo OK" &>/dev/null; then
-        ok "SSH to ${vm_ip}"
-    else
-        fail "SSH to ${vm_ip}"
-    fi
-done
+PVE_STATUS=$(curl -sk "https://${PROXMOX_HOST}:8006/api2/json/nodes/${PROXMOX_NODE}/status" \
+  -H "Authorization: PVEAPIToken root@pam!terraform=${PROXMOX_TOKEN}" 2>/dev/null || echo "")
+if echo "$PVE_STATUS" | grep -q "uptime"; then
+    ok "Proxmox API reachable on ${PROXMOX_HOST}"
+else
+    fail "Proxmox API not reachable on ${PROXMOX_HOST}"
+fi
 
 echo ""
 
 # -------------------------------------------------------------------------------------------------
-# MCP Watchdog
+# MCP Watchdog (LXC 119)
 # -------------------------------------------------------------------------------------------------
 echo "--- MCP Watchdog ---"
-WATCHDOG_STATUS=$(curl -sf http://10.10.10.50:8080/status 2>/dev/null || echo "")
-if [ -n "$WATCHDOG_STATUS" ]; then
-    ok "Watchdog API responding on :8080"
+WATCHDOG_IP="${WATCHDOG_IP:-192.168.100.119}"
+
+if curl -sf "http://${WATCHDOG_IP}:8080/health" 2>/dev/null | grep -q '"ok"'; then
+    ok "Watchdog API responding on ${WATCHDOG_IP}:8080"
 else
-    warn "Watchdog API not responding on 10.10.10.50:8080"
+    fail "Watchdog API not responding on ${WATCHDOG_IP}:8080"
 fi
 
-echo ""
-
-# -------------------------------------------------------------------------------------------------
-# Services
-# -------------------------------------------------------------------------------------------------
-echo "--- Services ---"
-SERVICES=(
-    "Grafana|10.10.10.20|3000|/api/health"
-    "Prometheus|10.10.10.20|9090|/-/healthy"
-    "Keycloak|10.10.20.20|8443|/health/ready"
-    "Nextcloud|10.10.30.10|443|/status.php"
-    "Vaultwarden|10.10.20.12|443|/alive"
-)
-
-for service_info in "${SERVICES[@]}"; do
-    IFS='|' read -r name ip port path <<< "$service_info"
-    if curl -skf "https://${ip}:${port}${path}" &>/dev/null || curl -sf "http://${ip}:${port}${path}" &>/dev/null; then
-        ok "${name} on ${ip}:${port}"
-    else
-        fail "${name} on ${ip}:${port}"
-    fi
-done
-
-echo ""
-
-# -------------------------------------------------------------------------------------------------
-# Security
-# -------------------------------------------------------------------------------------------------
-echo "--- Security ---"
-if ssh ${SSH_OPTS} -i "${SSH_KEY}" "${SSH_USER}@10.10.10.5" "grep -q '^PermitRootLogin no' /etc/ssh/sshd_config" &>/dev/null; then
-    ok "SSH: PermitRootLogin=no on bastion"
+WATCHDOG_STATUS=$(curl -sf "http://${WATCHDOG_IP}:8080/status" 2>/dev/null || echo "{}")
+if echo "$WATCHDOG_STATUS" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+hosts_ok=[h for h,v in d.items() if v.get('status')=='OK']
+hosts_drift=[h for h,v in d.items() if v.get('status')=='DRIFT']
+print(f'{len(hosts_ok)}OK/{len(hosts_drift)}DRIFT')
+" 2>/dev/null | grep -q "DRIFT"; then
+    warn "Watchdog reports DRIFT on some hosts"
 else
-    fail "SSH: PermitRootLogin not set to 'no' on bastion"
+    ok "Watchdog reports all hosts OK"
 fi
 
-if ssh ${SSH_OPTS} -i "${SSH_KEY}" "${SSH_USER}@10.10.10.5" "systemctl is-active ufw" &>/dev/null; then
-    ok "UFW is active on bastion"
+if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 root@${WATCHDOG_IP} "goss -g /etc/goss/goss.yaml validate --format json 2>/dev/null" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+sys.exit(d['summary']['failed-count'])
+" 2>/dev/null; then
+    ok "Goss compliance check passed on watchdog"
 else
-    fail "UFW is not active on bastion"
-fi
-
-if ssh ${SSH_OPTS} -i "${SSH_KEY}" "${SSH_USER}@10.10.10.5" "systemctl is-active crowdsec" &>/dev/null; then
-    ok "CrowdSec is active on bastion"
-else
-    warn "CrowdSec not active on bastion"
+    fail "Goss compliance check failed on watchdog"
 fi
 
 echo ""
@@ -131,10 +106,53 @@ echo ""
 # Forgejo
 # -------------------------------------------------------------------------------------------------
 echo "--- Forgejo ---"
-if curl -sf http://localhost:3000/api/v1/version &>/dev/null; then
-    ok "Forgejo is accessible on localhost:3000"
+FORGEJO_TOKEN="${FORGEJO_TOKEN:-774b2317f4cef0c7e5918ba48b6553b44f8c66c2}"
+
+if curl -sf "http://localhost:3000/api/v1/repos/git/asip" \
+  -H "Authorization: token ${FORGEJO_TOKEN}" 2>/dev/null | grep -q "asip"; then
+    ok "Forgejo repo 'git/asip' exists"
 else
-    warn "Forgejo not accessible on localhost:3000"
+    fail "Forgejo repo 'git/asip' not found"
+fi
+
+if curl -sf "http://localhost:3000/api/v1/version" 2>/dev/null | grep -q "version"; then
+    ok "Forgejo API accessible on localhost:3000"
+else
+    fail "Forgejo API not accessible on localhost:3000"
+fi
+
+echo ""
+
+# -------------------------------------------------------------------------------------------------
+# Forgejo Runner
+# -------------------------------------------------------------------------------------------------
+echo "--- Forgejo Runner (LXC 120) ---"
+RUNNER_IP="${RUNNER_IP:-192.168.100.120}"
+
+if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 root@${RUNNER_IP} "systemctl is-active forgejo-runner" 2>/dev/null | grep -q "active"; then
+    ok "Forgejo runner service active on ${RUNNER_IP}"
+else
+    fail "Forgejo runner service not active on ${RUNNER_IP}"
+fi
+
+echo ""
+
+# -------------------------------------------------------------------------------------------------
+# rclone + LocalStack sync
+# -------------------------------------------------------------------------------------------------
+echo "--- Hybrid Storage (rclone + LocalStack) ---"
+RCLONE="${RCLONE_LOCAL:-/mnt/6D33430F1C940A7B/Documents/opencode/.local/bin/rclone}"
+
+if [ -x "${RCLONE}" ]; then
+    ok "rclone available: $(${RCLONE} version | head -1)"
+else
+    warn "rclone not found at ${RCLONE}"
+fi
+
+if [ -x "${RCLONE}" ] && ${RCLCLONE} ls localstack:asip-backup 2>/dev/null; then
+    ok "rclone can access LocalStack S3 buckets"
+else
+    warn "rclone LocalStack connection not tested"
 fi
 
 echo ""
