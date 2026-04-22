@@ -5,15 +5,14 @@ on:
     branches: [main]
     paths:
       - 'ansible/**'
+      - 'mcp-agent/**'
   schedule:
     - cron: '30 4 * * *'
   workflow_dispatch:
 
 jobs:
   drift-check:
-    runs-on: ansible
-    container:
-      image: ansible/ansible-runner:latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,13 +22,11 @@ jobs:
           curl -fsSL https://github.com/goss-org/goss/releases/download/v0.4.8/goss-linux-amd64 -o /usr/local/bin/goss
           chmod +x /usr/local/bin/goss
 
-      - name: Run Goss validation on infrastructure hosts
+      - name: Run Goss validation on watchdog (self-check)
         run: |
           mkdir -p goss-results
-          for host in 10.10.10.5 10.10.10.20 10.10.10.50 10.10.20.10 10.10.20.12 10.10.30.10; do
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ansible@${host} \
-              "cat /var/log/goss/goss-results.json 2>/dev/null || echo '{}'" \
-              > "goss-results/${host}.json" 2>/dev/null || echo "{}" > "goss-results/${host}.json"
+          for host_ip in 192.168.100.119; do
+            curl -sf "http://${host_ip}:8080/status" > "goss-results/${host_ip}.json" 2>/dev/null || echo '{}' > "goss-results/${host_ip}.json"
           done
 
       - name: Check for drift
@@ -41,11 +38,11 @@ jobs:
           for f in glob.glob('goss-results/*.json'):
               try:
                   data = json.load(open(f))
-                  failed = data.get('summary', {}).get('failed-count', data.get('summary', {}).get('failed', 0))
-                  if failed > 0:
-                      host = f.split('/')[-1].replace('.json', '')
-                      hosts_with_drift.append(f'{host}: {failed} checks failed')
-                      total_failed += failed
+                  for host, host_data in data.items():
+                      failed = host_data.get('consecutive_failures', 0)
+                      if failed > 0:
+                          hosts_with_drift.append(f'{host}: {failed} consecutive failures')
+                          total_failed += failed
               except:
                   pass
           if total_failed > 0:

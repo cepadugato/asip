@@ -5,13 +5,12 @@ on:
     branches: [main]
     paths:
       - 'ansible/**'
+      - 'mcp-agent/**'
   workflow_dispatch:
 
 jobs:
-  ansible:
+  ansible-lint-and-check:
     runs-on: ansible
-    container:
-      image: ansible/ansible-runner:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,17 +25,10 @@ jobs:
           cd ansible
           ansible-playbook site.yml --syntax-check
 
-      - name: Ansible Dry Run
+      - name: Ansible Dry Run (mcp-watchdogs only)
         run: |
           cd ansible
           ansible-playbook site.yml --check --diff \
-            -i inventory/prod.yml
-
-      - name: Ansible Deploy
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cd ansible
-          ansible-playbook site.yml \
             -i inventory/prod.yml \
-            --private-key ~/.ssh/id_ed25519 \
-            -u ansible -b
+            --limit mcp_watchdogs \
+            --tags mcp-watchdog

@@ -9,35 +9,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  terraform-proxmox:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        run: |
-          curl -fsSL https://releases.hashicorp.com/terraform/1.8.0/terraform_1.8.0_linux_amd64.zip -o /tmp/terraform.zip
-          unzip /tmp/terraform.zip -d /usr/local/bin/
-          chmod +x /usr/local/bin/terraform
-          terraform version
-
-      - name: Terraform Init
-        run: |
-          cd terraform
-          terraform init -upgrade
-
-      - name: Terraform Plan
-        run: |
-          cd terraform
-          terraform plan -input=false -parallelism=1 -var-file=environments/prod.tfvars -out=tfplan
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cd terraform
-          terraform apply -input=false -parallelism=1 -auto-approve tfplan
-
   terraform-localstack:
     runs-on: ubuntu-latest
     steps:
@@ -68,3 +39,26 @@ jobs:
         run: |
           cd localstack/terraform
           tflocal apply -auto-approve tfplan
+
+  terraform-proxmox-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        run: |
+          curl -fsSL https://releases.hashicorp.com/terraform/1.13.1/terraform_1.13.1_linux_amd64.zip -o /tmp/terraform.zip
+          unzip /tmp/terraform.zip -d /usr/local/bin/
+          chmod +x /usr/local/bin/terraform
+          terraform version
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init -upgrade
+
+      - name: Terraform Plan (read-only)
+        run: |
+          cd terraform
+          terraform plan -input=false -parallelism=1 -var="proxmox_token=${{ secrets.PROXMOX_TOKEN }}" -out=tfplan
