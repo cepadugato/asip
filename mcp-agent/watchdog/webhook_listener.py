@@ -1,12 +1,13 @@
 import json
 import logging
+import os
+import yaml
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from watchdog.state import StateEngine
 from watchdog.remediation import RemediationEngine
 
 logger = logging.getLogger("asip.watchdog.webhook")
-
-app = FastAPI(title="ASIP Watchdog Webhook", version="1.0.0")
 
 state_engine: StateEngine = None
 remediation_engine: RemediationEngine = None
@@ -16,6 +17,33 @@ def init_engines(state: StateEngine, remediation: RemediationEngine):
     global state_engine, remediation_engine
     state_engine = state
     remediation_engine = remediation
+
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    global state_engine, remediation_engine
+    config_path = os.environ.get("WATCHDOG_CONFIG", "/etc/asip/watchdog/config.yaml")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f)
+        wd_cfg = cfg.get("watchdog", {})
+        state_engine = StateEngine(state_dir="/var/lib/asip/watchdog")
+        remediation_cfg = wd_cfg.get("remediation", {})
+        remediation_cfg["log_dir"] = wd_cfg.get("logging", {}).get("file", "/var/log/watchdog").rsplit("/", 1)[0]
+        remediation_engine = RemediationEngine(config=remediation_cfg, state=state_engine)
+        logger.info(f"Watchdog engines initialized from {config_path}")
+    else:
+        state_engine = StateEngine()
+        logger.warning(f"Config {config_path} not found, using defaults")
+    yield
+
+
+app = FastAPI(title="ASIP Watchdog Webhook", version="1.0.0", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "asip-watchdog", "version": "1.0.0"}
 
 
 @app.post("/webhook/goss")
