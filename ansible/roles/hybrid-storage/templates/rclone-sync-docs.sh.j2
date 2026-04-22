@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+# ASIP S3 Sync — Nextcloud documents to LocalStack
+SOURCE_DIR="/var/www/nextcloud/data"
+BUCKET="{{ hybrid_storage_rclone_remote_name }}:{{ hybrid_storage_documents_bucket }}/nextcloud"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+rclone sync "${SOURCE_DIR}" "${BUCKET}" \
+  --config {{ hybrid_storage_rclone_config_dir }}/rclone.conf \
+  --verbose \
+  --transfers 4 \
+  --log-file=/var/log/rclone-sync.log
+
+echo "[${TIMESTAMP}] Sync nextcloud -> ${BUCKET} completed"

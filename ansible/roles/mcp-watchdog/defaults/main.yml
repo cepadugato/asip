@@ -1,0 +1,26 @@
+---
+mcp_watchdog_user: "watchdog"
+mcp_watchdog_group: "watchdog"
+mcp_watchdog_install_dir: "/opt/asip/mcp-agent"
+mcp_watchdog_config_dir: "/etc/asip/watchdog"
+mcp_watchdog_log_dir: "/var/log/watchdog"
+mcp_watchdog_venv_dir: "/opt/asip/mcp-agent/venv"
+
+mcp_watchdog_webhook_host: "0.0.0.0"
+mcp_watchdog_webhook_port: 8080
+mcp_watchdog_poll_interval_seconds: 300
+mcp_watchdog_cooldown_seconds: 600
+mcp_watchdog_max_remediations_24h: 3
+mcp_watchdog_max_consecutive_failures: 5
+
+mcp_watchdog_ansible_playbook: "/opt/asip/ansible/site.yml"
+mcp_watchdog_ansible_inventory: "/opt/asip/ansible/inventory/prod.yml"
+mcp_watchdog_ansible_private_key: "~/.ssh/id_ed25519"
+mcp_watchdog_ansible_vault_password_file: "~/.vault_pass"
+mcp_watchdog_ansible_user: "ansible"
+
+mcp_watchdog_goss_results_path: "/var/log/goss/goss-results.json"
+
+mcp_watchdog_python_version: "3.11"
+
+mcp_watchdog_source_dir: "{{ playbook_dir }}/../mcp-agent"

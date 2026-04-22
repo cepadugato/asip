@@ -1,0 +1,10 @@
+[Unit]
+Description=ASIP Watchdog Poll Timer
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec={{ mcp_watchdog_poll_interval_seconds }}
+AccuracySec=30
+
+[Install]
+WantedBy=timers.target

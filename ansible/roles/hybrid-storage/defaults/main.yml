@@ -1,0 +1,16 @@
+---
+hybrid_storage_rclone_remote_name: "asip-s3"
+hybrid_storage_localstack_endpoint: "http://localhost:4566"
+hybrid_storage_aws_access_key: "test"
+hybrid_storage_aws_secret_key: "test"
+hybrid_storage_aws_region: "eu-west-1"
+
+hybrid_storage_rclone_config_dir: "/etc/rclone"
+hybrid_storage_rclone_cache_dir: "/var/cache/rclone"
+
+hybrid_storage_backup_bucket: "asip-backup"
+hybrid_storage_documents_bucket: "asip-documents"
+
+hybrid_storage_backup_cron_hour: "2"
+hybrid_storage_backup_cron_minute: "0"
+hybrid_storage_sync_cron_minute: "*/15"

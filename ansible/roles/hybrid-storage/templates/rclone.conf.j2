@@ -1,0 +1,10 @@
+[{{ hybrid_storage_rclone_remote_name }}]
+type = s3
+provider = Other
+env_auth = false
+access_key_id = {{ hybrid_storage_aws_access_key }}
+secret_access_key = {{ hybrid_storage_aws_secret_key }}
+endpoint = {{ hybrid_storage_localstack_endpoint }}
+force_path_style = true
+region = {{ hybrid_storage_aws_region }}
+no_check_bucket = true

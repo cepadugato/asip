@@ -1,0 +1,156 @@
+---
+- name: Create watchdog system user
+  ansible.builtin.user:
+    name: "{{ mcp_watchdog_user }}"
+    system: true
+    shell: "/usr/sbin/nologin"
+    create_home: false
+    groups: "{{ mcp_watchdog_group }}"
+
+- name: Install Python 3 and pip
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - libffi-dev
+      - libssl-dev
+      - gcc
+    state: present
+    update_cache: true
+
+- name: Create ASIP directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ mcp_watchdog_user }}"
+    group: "{{ mcp_watchdog_group }}"
+    mode: "0755"
+  loop:
+    - "{{ mcp_watchdog_install_dir }}"
+    - "{{ mcp_watchdog_config_dir }}"
+    - "{{ mcp_watchdog_log_dir }}"
+    - "{{ mcp_watchdog_venv_dir }}"
+
+- name: Create Python virtual environment
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -m
+      - venv
+      - "{{ mcp_watchdog_venv_dir }}"
+    creates: "{{ mcp_watchdog_venv_dir }}/bin/python"
+
+- name: Copy requirements.txt
+  ansible.builtin.copy:
+    src: "{{ mcp_watchdog_source_dir }}/requirements.txt"
+    dest: "{{ mcp_watchdog_install_dir }}/requirements.txt"
+    owner: "{{ mcp_watchdog_user }}"
+    group: "{{ mcp_watchdog_group }}"
+    mode: "0644"
+  notify: Restart mcp-watchdog
+
+- name: Install Python dependencies
+  ansible.builtin.pip:
+    requirements: "{{ mcp_watchdog_install_dir }}/requirements.txt"
+    virtualenv: "{{ mcp_watchdog_venv_dir }}"
+  notify: Restart mcp-watchdog
+
+- name: Copy MCP watchdog source files
+  ansible.builtin.copy:
+    src: "{{ mcp_watchdog_source_dir }}/{{ item }}"
+    dest: "{{ mcp_watchdog_install_dir }}/{{ item }}"
+    owner: "{{ mcp_watchdog_user }}"
+    group: "{{ mcp_watchdog_group }}"
+    mode: "0644"
+  loop:
+    - server.py
+    - watchdog/__init__.py
+    - watchdog/poller.py
+    - watchdog/webhook_listener.py
+    - watchdog/remediation.py
+    - watchdog/state.py
+  notify: Restart mcp-watchdog
+
+- name: Create __init__.py for watchdog package
+  ansible.builtin.file:
+    path: "{{ mcp_watchdog_install_dir }}/watchdog/__init__.py"
+    state: touch
+    owner: "{{ mcp_watchdog_user }}"
+    group: "{{ mcp_watchdog_group }}"
+    mode: "0644"
+
+- name: Deploy watchdog configuration
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ mcp_watchdog_config_dir }}/config.yaml"
+    owner: "{{ mcp_watchdog_user }}"
+    group: "{{ mcp_watchdog_group }}"
+    mode: "0640"
+  notify: Restart mcp-watchdog
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: mcp-watchdog.service.j2
+    dest: /etc/systemd/system/mcp-watchdog.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart mcp-watchdog
+
+- name: Deploy systemd timer for polling
+  ansible.builtin.template:
+    src: mcp-watchdog-poll.timer.j2
+    dest: /etc/systemd/system/mcp-watchdog-poll.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart mcp-watchdog
+
+- name: Deploy systemd timer service
+  ansible.builtin.template:
+    src: mcp-watchdog-poll.service.j2
+    dest: /etc/systemd/system/mcp-watchdog-poll.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create log rotation for watchdog
+  ansible.builtin.template:
+    src: watchdog-logrotate.j2
+    dest: /etc/logrotate.d/watchdog
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start MCP watchdog service
+  ansible.builtin.systemd:
+    name: mcp-watchdog
+    state: started
+    enabled: true
+
+- name: Enable and start MCP watchdog poll timer
+  ansible.builtin.systemd:
+    name: mcp-watchdog-poll.timer
+    state: started
+    enabled: true
+
+- name: Open firewall for webhook port
+  community.general.ufw:
+    rule: allow
+    port: "{{ mcp_watchdog_webhook_port }}"
+    proto: tcp
+    src: "10.10.0.0/16"
+  notify: Reload UFW
+
+- name: Wait for watchdog service to be ready
+  ansible.builtin.wait_for:
+    port: "{{ mcp_watchdog_webhook_port }}"
+    host: "0.0.0.0"
+    delay: 2
+    timeout: 30

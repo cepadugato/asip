@@ -1,0 +1,5 @@
+---
+- name: Restart mcp-watchdog
+  ansible.builtin.systemd:
+    name: mcp-watchdog
+    state: restarted

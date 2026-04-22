@@ -1,0 +1,30 @@
+poller:
+  interval_seconds: 300
+  ssh_user: ansible
+  ssh_key: ~/.ssh/id_ed25519
+  goss_results_path: /var/log/goss/goss-results.json
+  timeout_seconds: 10
+
+webhook:
+  host: "0.0.0.0"
+  port: 8080
+  endpoint: /webhook/goss
+
+remediation:
+  cooldown_seconds: 600
+  max_remediations_24h: 3
+  max_consecutive_failures: 5
+  ansible_playbook: /opt/asip/ansible/site.yml
+  ansible_inventory: /opt/asip/ansible/inventory/prod.yml
+  ansible_private_key: ~/.ssh/id_ed25519
+  ansible_vault_password_file: ~/.vault_pass
+  tag_mapping:
+    ssh_config: hardening
+    service_failure: ""
+    file_integrity: hardening
+
+logging:
+  dir: /var/log/watchdog
+  level: INFO
+  max_size_mb: 50
+  backup_count: 5

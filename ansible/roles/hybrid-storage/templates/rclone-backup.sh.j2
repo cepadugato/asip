@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+# ASIP S3 Backup — vaultwarden backup to LocalStack
+SOURCE_DIR="/var/lib/vaultwarden"
+BUCKET="{{ hybrid_storage_rclone_remote_name }}:{{ hybrid_storage_backup_bucket }}/vaultwarden"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+rclone sync "${SOURCE_DIR}" "${BUCKET}" \
+  --config {{ hybrid_storage_rclone_config_dir }}/rclone.conf \
+  --verbose \
+  --log-file=/var/log/rclone-backup.log
+
+echo "[${TIMESTAMP}] Backup vaultwarden -> ${BUCKET} completed"

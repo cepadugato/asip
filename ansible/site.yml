@@ -1,0 +1,32 @@
+---
+# ASIP Site Playbook
+# Extends infra-proxmox/ansible/site.yml with ASIP-specific roles
+# References existing roles via relative path
+
+- name: Hardening - CIS Benchmark for all hosts
+  import_playbook: ../../infra-proxmox/ansible/site.yml
+  tags: [hardening]
+
+- name: ASIP - MCP Watchdog Agent
+  hosts: mcp_watchdogs
+  become: true
+  tags: [mcp-watchdog, asip, autonomous-ops]
+  roles:
+    - role: mcp-watchdog
+
+- name: ASIP - Hybrid Storage (rclone + LocalStack S3)
+  hosts: vault_servers:collab_servers:mcp_watchdogs
+  become: true
+  tags: [hybrid-storage, asip, simulate]
+  roles:
+    - role: hybrid-storage
+
+- name: ASIP - Forgejo Runner (rename from gitea-ci)
+  hosts: monitoring_servers
+  become: true
+  tags: [cicd, forgejo, runner]
+  roles:
+    - role: gitea-ci
+      vars:
+        gitea_server_url: "http://localhost:3000"
+        gitea_runner_name: "asip-forgejo-runner"

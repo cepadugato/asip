@@ -1,0 +1,65 @@
+name: Drift Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ansible/**'
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  drift-check:
+    runs-on: ansible
+    container:
+      image: ansible/ansible-runner:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Goss
+        run: |
+          curl -fsSL https://github.com/goss-org/goss/releases/download/v0.4.8/goss-linux-amd64 -o /usr/local/bin/goss
+          chmod +x /usr/local/bin/goss
+
+      - name: Run Goss validation on infrastructure hosts
+        run: |
+          mkdir -p goss-results
+          for host in 10.10.10.5 10.10.10.20 10.10.10.50 10.10.20.10 10.10.20.12 10.10.30.10; do
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ansible@${host} \
+              "cat /var/log/goss/goss-results.json 2>/dev/null || echo '{}'" \
+              > "goss-results/${host}.json" 2>/dev/null || echo "{}" > "goss-results/${host}.json"
+          done
+
+      - name: Check for drift
+        run: |
+          python3 -c "
+          import json, glob, sys
+          total_failed = 0
+          hosts_with_drift = []
+          for f in glob.glob('goss-results/*.json'):
+              try:
+                  data = json.load(open(f))
+                  failed = data.get('summary', {}).get('failed-count', data.get('summary', {}).get('failed', 0))
+                  if failed > 0:
+                      host = f.split('/')[-1].replace('.json', '')
+                      hosts_with_drift.append(f'{host}: {failed} checks failed')
+                      total_failed += failed
+              except:
+                  pass
+          if total_failed > 0:
+              print(f'DRIFT DETECTED on {len(hosts_with_drift)} hosts:')
+              for h in hosts_with_drift:
+                  print(f'  - {h}')
+              sys.exit(1)
+          else:
+              print('No drift detected - all hosts conformant')
+          "
+
+      - name: Upload drift results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goss-results
+          path: goss-results/*.json

@@ -1,0 +1,88 @@
+---
+- name: Install rclone
+  ansible.builtin.apt:
+    name: rclone
+    state: present
+    update_cache: true
+
+- name: Install awscli via pip
+  ansible.builtin.pip:
+    name: awscli
+    state: present
+
+- name: Create rclone config directory
+  ansible.builtin.file:
+    path: "{{ hybrid_storage_rclone_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create rclone cache directory
+  ansible.builtin.file:
+    path: "{{ hybrid_storage_rclone_cache_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy rclone configuration for LocalStack S3
+  ansible.builtin.template:
+    src: rclone.conf.j2
+    dest: "{{ hybrid_storage_rclone_config_dir }}/rclone.conf"
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Validate rclone config
+
+- name: Deploy AWS CLI configuration
+  ansible.builtin.template:
+    src: aws-config.j2
+    dest: "/root/.aws/config"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Deploy AWS CLI credentials
+  ansible.builtin.template:
+    src: aws-credentials.j2
+    dest: "/root/.aws/credentials"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Create backup script for vault-server
+  ansible.builtin.template:
+    src: rclone-backup.sh.j2
+    dest: "/usr/local/bin/asip-backup.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  when: "'vault_servers' in group_names"
+
+- name: Create sync script for collab-server
+  ansible.builtin.template:
+    src: rclone-sync-docs.sh.j2
+    dest: "/usr/local/bin/asip-sync-docs.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  when: "'collab_servers' in group_names"
+
+- name: Create cron job for vault backup
+  ansible.builtin.cron:
+    name: "asip-s3-backup"
+    hour: "{{ hybrid_storage_backup_cron_hour }}"
+    minute: "{{ hybrid_storage_backup_cron_minute }}"
+    job: "/usr/local/bin/asip-backup.sh >> /var/log/rclone-backup.log 2>&1"
+    user: root
+  when: "'vault_servers' in group_names"
+
+- name: Create cron job for documents sync
+  ansible.builtin.cron:
+    name: "asip-s3-sync-docs"
+    minute: "{{ hybrid_storage_sync_cron_minute }}"
+    hour: "*"
+    job: "/usr/local/bin/asip-sync-docs.sh >> /var/log/rclone-sync.log 2>&1"
+    user: root
+  when: "'collab_servers' in group_names"

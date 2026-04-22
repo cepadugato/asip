@@ -1,0 +1,17 @@
+[Unit]
+Description=ASIP MCP Watchdog — Autonomous Operations Agent
+After=network.target
+
+[Service]
+Type=simple
+User={{ mcp_watchdog_user }}
+Group={{ mcp_watchdog_group }}
+WorkingDirectory={{ mcp_watchdog_install_dir }}
+ExecStart={{ mcp_watchdog_venv_dir }}/bin/python {{ mcp_watchdog_install_dir }}/server.py --config {{ mcp_watchdog_config_dir }}/config.yaml
+Restart=always
+RestartSec=10
+Environment=WATCHDOG_CONFIG={{ mcp_watchdog_config_dir }}/config.yaml
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

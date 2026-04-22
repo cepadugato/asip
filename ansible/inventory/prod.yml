@@ -1,0 +1,148 @@
+---
+all:
+  hosts:
+    ad-server:
+      ansible_host: 10.10.20.10
+    ad-server-2:
+      ansible_host: 10.10.20.13
+    dhcp-server:
+      ansible_host: 10.10.20.11
+    dhcp-server-2:
+      ansible_host: 10.10.20.14
+    vault-server:
+      ansible_host: 10.10.20.12
+    collab-server:
+      ansible_host: 10.10.30.10
+    mail-server:
+      ansible_host: 10.10.30.11
+    keycloak-server:
+      ansible_host: 10.10.20.20
+    keycloak-server-2:
+      ansible_host: 10.10.20.23
+    step-ca-server:
+      ansible_host: 10.10.20.21
+    test-client:
+      ansible_host: 10.10.40.100
+    monitoring-server:
+      ansible_host: 10.10.10.20
+    dmz-proxy:
+      ansible_host: 10.10.50.10
+    bastion:
+      ansible_host: 10.10.10.5
+    pg-node-1:
+      ansible_host: 10.10.10.30
+    pg-node-2:
+      ansible_host: 10.10.10.31
+    pg-node-3:
+      ansible_host: 10.10.10.32
+    haproxy-1:
+      ansible_host: 10.10.50.20
+    haproxy-2:
+      ansible_host: 10.10.50.21
+    mcp-watchdog:
+      ansible_host: 10.10.10.50
+  children:
+    ad_servers:
+      hosts:
+        ad-server:
+    ad_servers_2:
+      hosts:
+        ad-server-2:
+          ansible_user: admin
+          role: ad-server-2
+    dhcp_servers:
+      hosts:
+        dhcp-server:
+    dhcp_servers_2:
+      hosts:
+        dhcp-server-2:
+          ansible_user: admin
+          role: dhcp-server-2
+    vault_servers:
+      hosts:
+        vault-server:
+    collab_servers:
+      hosts:
+        collab-server:
+    mail_servers:
+      hosts:
+        mail-server:
+    keycloak_servers:
+      hosts:
+        keycloak-server:
+    keycloak_servers_2:
+      hosts:
+        keycloak-server-2:
+          ansible_user: admin
+          role: keycloak-server-2
+    step_ca_servers:
+      hosts:
+        step-ca-server:
+    routers:
+      hosts:
+        opnsense-router:
+          ansible_host: 10.10.20.1
+          ansible_user: root
+          ansible_connection: local
+          ansible_python_interpreter: /usr/bin/python3
+    routers_2:
+      hosts:
+        opnsense-router-2:
+          ansible_host: 10.10.20.2
+          ansible_connection: local
+          role: router-2
+    test_clients:
+      hosts:
+        test-client:
+    monitoring_servers:
+      hosts:
+        monitoring-server:
+    pg_nodes:
+      hosts:
+        pg-node-1:
+          ansible_user: admin
+          role: pg-node
+        pg-node-2:
+          ansible_user: admin
+          role: pg-node
+        pg-node-3:
+          ansible_user: admin
+          role: pg-node
+    dmz_proxies:
+      hosts:
+        dmz-proxy:
+    bastions:
+      hosts:
+        bastion:
+    haproxy_load_balancers:
+      hosts:
+        haproxy-1:
+          ansible_user: admin
+          role: haproxy-lb
+        haproxy-2:
+          ansible_user: admin
+          role: haproxy-lb
+    registry_servers:
+      hosts:
+        monitoring-server:
+    mcp_watchdogs:
+      hosts:
+        mcp-watchdog:
+          role: mcp-watchdog
+    services:
+      children:
+        ad_servers:
+        ad_servers_2:
+        dhcp_servers:
+        dhcp_servers_2:
+        vault_servers:
+        keycloak_servers:
+        keycloak_servers_2:
+        step_ca_servers:
+        pg_nodes:
+        haproxy_load_balancers:
+        mcp_watchdogs:
+    collab:
+      children:
+        collab_servers:
+        mail_servers:

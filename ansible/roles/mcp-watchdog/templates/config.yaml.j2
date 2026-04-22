@@ -1,0 +1,27 @@
+# ASIP MCP Watchdog Configuration
+poller:
+  interval_seconds: {{ mcp_watchdog_poll_interval_seconds }}
+  ssh_user: {{ mcp_watchdog_ansible_user }}
+  ssh_key: {{ mcp_watchdog_ansible_private_key }}
+  goss_results_path: {{ mcp_watchdog_goss_results_path }}
+  timeout_seconds: 10
+
+webhook:
+  host: {{ mcp_watchdog_webhook_host }}
+  port: {{ mcp_watchdog_webhook_port }}
+  endpoint: /webhook/goss
+
+remediation:
+  cooldown_seconds: {{ mcp_watchdog_cooldown_seconds }}
+  max_remediations_24h: {{ mcp_watchdog_max_remediations_24h }}
+  max_consecutive_failures: {{ mcp_watchdog_max_consecutive_failures }}
+  ansible_playbook: {{ mcp_watchdog_ansible_playbook }}
+  ansible_inventory: {{ mcp_watchdog_ansible_inventory }}
+  ansible_private_key: {{ mcp_watchdog_ansible_private_key }}
+  ansible_vault_password_file: {{ mcp_watchdog_ansible_vault_password_file }}
+
+logging:
+  dir: {{ mcp_watchdog_log_dir }}
+  level: INFO
+  max_size_mb: 50
+  backup_count: 5

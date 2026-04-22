@@ -1,0 +1,9 @@
+[Unit]
+Description=ASIP Watchdog Poll Service
+
+[Service]
+Type=oneshot
+User={{ mcp_watchdog_user }}
+Group={{ mcp_watchdog_group }}
+WorkingDirectory={{ mcp_watchdog_install_dir }}
+ExecStart={{ mcp_watchdog_venv_dir }}/bin/python {{ mcp_watchdog_install_dir }}/watchdog/poller.py --config {{ mcp_watchdog_config_dir }}/config.yaml
