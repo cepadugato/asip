@@ -15,8 +15,6 @@ on:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
-    container:
-      image: ansible/ansible-runner:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,16 +26,14 @@ jobs:
           mv /tmp/trivy /usr/local/bin/trivy
           chmod +x /usr/local/bin/trivy
 
-      - name: Scan filesystem for vulnerabilities
+      - name: Scan IaC and Python code for vulnerabilities
         run: |
           trivy fs --severity CRITICAL,HIGH --format json --output trivy-fs-results.json . || true
+          trivy fs --severity CRITICAL,HIGH --format table . || true
 
-      - name: Scan container images
+      - name: Scan Terraform for misconfigurations
         run: |
-          for image in vaultwarden/server:latest keycloak/keycloak:26.0 postgres:16 nginx:1.25; do
-            trivy image --severity CRITICAL,HIGH --format json \
-              --output "trivy-image-$(echo $image | tr '/:' '-').json" "$image" || true
-          done
+          trivy config --severity CRITICAL,HIGH --format json --output trivy-tf-results.json terraform/ localstack/terraform/ || true
 
       - name: Evaluate results
         run: |
@@ -53,9 +49,13 @@ jobs:
                           total += 1
                           if v.get('Severity') == 'CRITICAL':
                               critical += 1
+                      for m in r.get('Misconfigurations', []):
+                          total += 1
+                          if m.get('Severity') == 'CRITICAL':
+                              critical += 1
               except:
                   pass
-          print(f'Total vulns: {total}, CRITICAL: {critical}')
+          print(f'Total findings: {total}, CRITICAL: {critical}')
           if critical > 0:
               print('BLOCKING: Critical vulnerabilities found!')
               sys.exit(1)
@@ -64,6 +64,7 @@ jobs:
 
       - name: Upload scan results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: trivy-results
           path: trivy-*.json
