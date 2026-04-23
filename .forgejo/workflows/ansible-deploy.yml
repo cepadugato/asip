@@ -20,20 +20,33 @@ jobs:
       - name: Install Ansible
         run: |
           apt-get update -qq && apt-get install -qq -y python3-pip > /dev/null 2>&1
-          pip3 install ansible-core
+          pip3 install --break-system-packages ansible-core
           ansible-galaxy collection install community.general ansible.posix
 
-      - name: Ansible Syntax Check
+      - name: Ansible Role Syntax Check
         run: |
           cd /tmp/asip-ci/ansible
-          ansible-playbook site.yml --syntax-check
+          # Only check ASIP roles (infra-proxmox import not available in CI)
+          for role_dir in roles/*/; do
+            role_name=$(basename "$role_dir")
+            echo "Checking role: $role_name"
+            ansible-playbook -i localhost, --connection=local \
+              -e "ansible_python_interpreter=/usr/bin/python3" \
+              <(echo "---
+          - hosts: localhost
+            become: true
+            roles:
+              - role: $role_name") --syntax-check || exit 1
+          done
 
       - name: Ansible Dry Run (mcp-watchdog role only)
         run: |
           cd /tmp/asip-ci/ansible
+          # Dry run the watchdog play only (skip infra-proxmox import)
           ansible-playbook site.yml --check --diff \
             -i inventory/prod.yml \
             --limit mcp_watchdogs \
             --tags mcp-watchdog \
+            --skip-tags hardening \
             --connection=local \
             -e "ansible_host=localhost ansible_connection=local" || true
