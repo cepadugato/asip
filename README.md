@@ -28,7 +28,7 @@ A.S.I.P. est un projet démontrant qu'une infrastructure complète peut être **
 | IA Agentique | LLM GLM 5.1 + MCP | Surveillance et auto-remédiation |
 | OS | Ubuntu Server 22.04 (LXC), 24.04 (VMs) | Systèmes d'exploitation |
 | Sécurité | Trivy, Goss, CrowdSec, AIDE | Scans, conformité, détection d'intrusion |
-| CI/CD Runner | Forgejo Runner v0.2.11 | Exécution des workflows CI/CD |
+| CI/CD Runner | Forgejo Runner v0.2.11 | Exécution des workflows CI/CD (sur PC hôte, Docker) |
 
 ## Architecture réseau
 
@@ -37,15 +37,11 @@ A.S.I.P. est un projet démontrant qu'une infrastructure complète peut être **
                        │         PROXMOX VE (pve)            │
                        │         192.168.100.254              │
                        │                                     │
-    VLAN 10 (MGMT)     │  ┌──────────┐  ┌───────────────┐    │
-    10.10.10.0/24      │  │ bastion  │  │ mcp-watchdog  │    │
-                       │  │  .5      │  │ .119 (LXC)    │    │
-                       │  └──────────┘  └───────────────┘    │
-                       │  ┌──────────────────────────────┐   │
-                       │  │ forgejo-runner (LXC 120)     │   │
-                       │  │ 192.168.100.120               │   │
-                       │  └──────────────────────────────┘   │
-                       │                        │             │
+     VLAN 10 (MGMT)     │  ┌──────────┐  ┌───────────────┐    │
+     10.10.10.0/24      │  │ bastion  │  │ mcp-watchdog  │    │
+                        │  │  .5      │  │ .119 (LXC)    │    │
+                        │  └──────────┘  └───────────────┘    │
+                        │                        │             │
     VLAN 20 (SERVICES) │  ┌──────┐ ┌──────┐ ┌──────┐       │
     10.10.20.0/24      │  │ AD   │ │ DHCP │ │Vault │ ...    │
                        │  │ .10  │ │ .11  │ │ .12  │       │
@@ -76,16 +72,20 @@ A.S.I.P. est un projet démontrant qu'une infrastructure complète peut être **
                                        │
                                        │Réseau local
                                        ▼
-                       ┌─────────────────────────────────────┐
-                       │          PC HOTE                    │
-                       │  ┌───────────┐  ┌──────────────┐   │
-                       │  │ Forgejo   │  │ LocalStack   │   │
-                       │  │ :3000     │  │ :4566        │   │
-                       │  └───────────┘  └──────────────┘   │
-                       │  ┌───────────────────────────────┐  │
-                       │  │ OpenCode (Agent IA + MCP)     │  │
-                       │  └───────────────────────────────┘  │
-                       └─────────────────────────────────────┘
+                        ┌─────────────────────────────────────┐
+                        │          PC HOTE                    │
+                        │  ┌───────────┐  ┌──────────────┐   │
+                        │  │ Forgejo   │  │ LocalStack   │   │
+                        │  │ :3000     │  │ :4566        │   │
+                        │  └───────────┘  └──────────────┘   │
+                        │  ┌───────────────────────────────┐  │
+                        │  │ OpenCode (Agent IA + MCP)      │  │
+                        │  └───────────────────────────────┘  │
+                        │  ┌───────────────────────────────┐  │
+                        │  │ Forgejo Runner (systemd user) │  │
+                        │  │ docker://node:22-bookworm      │  │
+                        │  └───────────────────────────────┘  │
+                        └─────────────────────────────────────┘
 ```
 
 ## Flux de données

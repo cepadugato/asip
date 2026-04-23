@@ -8,7 +8,7 @@ Ce document décrit le scénario de démonstration pas-à-pas pour présenter le
 
 - LocalStack démarré sur le PC hôte (`localhost:4566`)
 - Forgejo accessible (`localhost:3000`)
-- Infrastructure Proxmox déployée (19 VMs + 2 routeurs + 2 LXC)
+- Infrastructure Proxmox déployée (19 VMs + 2 routeurs + 1 LXC)
 - MCP Watchdog opérationnel (`192.168.100.119:8080`)
 - Agent IA OpenCode connecté via MCP
 
@@ -28,7 +28,7 @@ Ce document décrit le scénario de démonstration pas-à-pas pour présenter le
 **Ce qui se passe** :
 1. Génération des secrets (ansible-vault)
 2. Préparation des images OPNsense
-3. Terraform `init` + `plan` + `apply` (19 VMs + 2 routeurs + 2 LXC)
+3. Terraform `init` + `plan` + `apply` (19 VMs + 2 routeurs + 1 LXC)
 4. Démarrage du routeur OPNsense + attente API
 5. Configuration OPNsense via Ansible
 6. Démarrage ordonné des VMs (AD → DHCP → PKI → Services → Collab → DMZ)
