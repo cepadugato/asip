@@ -26,61 +26,66 @@ A.S.I.P. est un projet démontrant qu'une infrastructure complète peut être **
 | CI/CD & Git | Forgejo 14.x | Usine logicielle privée + Actions |
 | Cloud Mocking | LocalStack 3.x | Simulation AWS S3/IAM en local |
 | IA Agentique | LLM GLM 5.1 + MCP | Surveillance et auto-remédiation |
-| OS | Ubuntu Server 24.04 | Systèmes d'exploitation des VMs |
+| OS | Ubuntu Server 22.04 (LXC), 24.04 (VMs) | Systèmes d'exploitation |
 | Sécurité | Trivy, Goss, CrowdSec, AIDE | Scans, conformité, détection d'intrusion |
+| CI/CD Runner | Forgejo Runner v0.2.11 | Exécution des workflows CI/CD |
 
 ## Architecture réseau
 
 ```
-                      ┌─────────────────────────────────────┐
-                      │         PROXMOX VE (pve)            │
-                      │         192.168.100.254              │
-                      │                                     │
-   VLAN 10 (MGMT)     │  ┌──────────┐  ┌───────────────┐    │
-   10.10.10.0/24      │  │ bastion  │  │ mcp-watchdog  │    │
-                      │  │  .5      │  │  .50          │    │
-                      │  └──────────┘  └───────┬───────┘    │
-                      │                        │             │
-   VLAN 20 (SERVICES) │  ┌──────┐ ┌──────┐ ┌──────┐       │
-   10.10.20.0/24      │  │ AD   │ │ DHCP │ │Vault │ ...    │
-                      │  │ .10  │ │ .11  │ │ .12  │       │
-                      │  └──────┘ └──────┘ └──────┘       │
-                      │                                     │
-   VLAN 30 (COLLAB)   │  ┌──────────┐  ┌──────────┐       │
-   10.10.30.0/24      │  │Nextcloud │  │  Mail    │       │
-                      │  │  .10     │  │  .11     │       │
-                      │  └──────────┘  └──────────┘       │
-                      │                                     │
-   VLAN 40 (CLIENTS)  │  ┌──────────────┐                  │
-   10.10.40.0/24      │  │ test-client  │                  │
-                      │  │  .100        │                  │
-                      │  └──────────────┘                  │
-                      │                                     │
-   VLAN 50 (DMZ)      │  ┌───────┐  ┌────────┐            │
-   10.10.50.0/24      │  │ Proxy │  │HAProxy │            │
-                      │  │ .10   │  │ .20/.21│            │
-                      │  └───────┘  └────────┘            │
-                      │                                     │
-                      │  ┌─────────────────────────────┐   │
-                      │  │ OPNsense Router (CARP HA)   │   │
-                      │  │ Primary: 10.10.20.1         │   │
-                      │  │ Backup:  10.10.20.2         │   │
-                      │  │ CARP VIPs: .254             │   │
-                      │  └─────────────────────────────┘   │
-                      └─────────────────────────────────────┘
-                                      │
-                                      │Réseau local
-                                      ▼
-                      ┌─────────────────────────────────────┐
-                      │          PC HOTE                    │
-                      │  ┌───────────┐  ┌──────────────┐   │
-                      │  │ Forgejo   │  │ LocalStack   │   │
-                      │  │ :3000     │  │ :4566         │   │
-                      │  └───────────┘  └──────────────┘   │
-                      │  ┌───────────────────────────────┐  │
-                      │  │ OpenCode (Agent IA + MCP)     │  │
-                      │  └───────────────────────────────┘  │
-                      └─────────────────────────────────────┘
+                       ┌─────────────────────────────────────┐
+                       │         PROXMOX VE (pve)            │
+                       │         192.168.100.254              │
+                       │                                     │
+    VLAN 10 (MGMT)     │  ┌──────────┐  ┌───────────────┐    │
+    10.10.10.0/24      │  │ bastion  │  │ mcp-watchdog  │    │
+                       │  │  .5      │  │ .119 (LXC)    │    │
+                       │  └──────────┘  └───────────────┘    │
+                       │  ┌──────────────────────────────┐   │
+                       │  │ forgejo-runner (LXC 120)     │   │
+                       │  │ 192.168.100.120               │   │
+                       │  └──────────────────────────────┘   │
+                       │                        │             │
+    VLAN 20 (SERVICES) │  ┌──────┐ ┌──────┐ ┌──────┐       │
+    10.10.20.0/24      │  │ AD   │ │ DHCP │ │Vault │ ...    │
+                       │  │ .10  │ │ .11  │ │ .12  │       │
+                       │  └──────┘ └──────┘ └──────┘       │
+                       │                                     │
+    VLAN 30 (COLLAB)   │  ┌──────────┐  ┌──────────┐       │
+    10.10.30.0/24      │  │Nextcloud │  │  Mail    │       │
+                       │  │  .10     │  │  .11     │       │
+                       │  └──────────┘  └──────────┘       │
+                       │                                     │
+    VLAN 40 (CLIENTS)  │  ┌──────────────┐                  │
+    10.10.40.0/24      │  │ test-client  │                  │
+                       │  │  .100        │                  │
+                       │  └──────────────┘                  │
+                       │                                     │
+    VLAN 50 (DMZ)      │  ┌───────┐  ┌────────┐            │
+    10.10.50.0/24      │  │ Proxy │  │HAProxy │            │
+                       │  │ .10   │  │ .20/.21│            │
+                       │  └───────┘  └────────┘            │
+                       │                                     │
+                       │  ┌─────────────────────────────┐   │
+                       │  │ OPNsense Router (CARP HA)   │   │
+                       │  │ Primary: 10.10.20.1         │   │
+                       │  │ Backup:  10.10.20.2         │   │
+                       │  │ CARP VIPs: .254             │   │
+                       │  └─────────────────────────────┘   │
+                       └─────────────────────────────────────┘
+                                       │
+                                       │Réseau local
+                                       ▼
+                       ┌─────────────────────────────────────┐
+                       │          PC HOTE                    │
+                       │  ┌───────────┐  ┌──────────────┐   │
+                       │  │ Forgejo   │  │ LocalStack   │   │
+                       │  │ :3000     │  │ :4566        │   │
+                       │  └───────────┘  └──────────────┘   │
+                       │  ┌───────────────────────────────┐  │
+                       │  │ OpenCode (Agent IA + MCP)     │  │
+                       │  └───────────────────────────────┘  │
+                       └─────────────────────────────────────┘
 ```
 
 ## Flux de données
@@ -103,9 +108,9 @@ A.S.I.P. est un projet démontrant qu'une infrastructure complète peut être **
        Goss timer (5 min)
               │
        ┌──────▼──────┐
-       │  MCP Watchdog│ ◄── POST /webhook (si drift)
-       │  (10.10.10.50)│
-       └──────┬──────┘
+        │  MCP Watchdog│ ◄── POST /webhook (si drift)
+        │(192.168.100.119)
+        └──────┬──────┘
               │
        Drift detecté?
        ├── Oui ──► ansible-playbook --tags <role> (auto-remediation)
@@ -170,11 +175,11 @@ asip/
 
 ### Prérequis
 
-- Proxmox VE 8.2+ avec template Ubuntu 24.04 cloud-init (VMID 9000)
+- Proxmox VE 8.2+ avec template Ubuntu 22.04 cloud-init (LXC) et Ubuntu 24.04 cloud-init (VMID 9000)
 - Docker + Docker Compose sur le PC hôte
 - Terraform 1.8+, Ansible 2.16+, Python 3.11+
 - Forgejo fonctionnel sur `localhost:3000`
-- Accès SSH au réseau `10.10.0.0/16`
+- Accès SSH au réseau `192.168.100.0/24`
 
 ### 1. Démarrer LocalStack
 

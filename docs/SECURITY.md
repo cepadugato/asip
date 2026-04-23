@@ -261,12 +261,12 @@ Le pipeline de sécurité est intégré directement dans le workflow CI/CD de Fo
 
 ### Conformité continue (Goss)
 
-Le rôle `goss-drift` déploie sur chaque VM :
+Le rôle `goss-poll` déploie sur chaque VM :
 
 - Un fichier `/etc/goss/goss.yaml` décrivant l'état attendu
-- Un timer systemd `goss-drift.timer` (toutes les 5 minutes)
-- Un service `goss-drift.service` qui exécute la validation
-- Un webhook vers `http://10.10.10.50:8080/webhook/goss` en cas de drift
+- Un timer systemd `goss-poll.timer` (toutes les 5 minutes)
+- Un service `goss-poll.service` qui exécute la validation
+- Un webhook vers `http://192.168.100.119:8080/webhook/goss` en cas de drift
 
 **Exemple de vérifications Goss :**
 
@@ -285,6 +285,9 @@ service:
   auditd:
     running: true
     enabled: true
+  goss-poll:
+    running: true
+    enabled: true
 
 file:
   /etc/ssh/sshd_config:
@@ -293,6 +296,10 @@ file:
       - "!/PermitRootLogin yes/"
       - "!/PasswordAuthentication yes/"
       - "/PermitEmptyPasswords no/"
+  /etc/goss/goss.yaml:
+    exists: true
+  /etc/ufw/ufw.conf:
+    exists: true
 
 package:
   apparmor:
@@ -301,6 +308,8 @@ package:
     installed: true
   ufw:
     installed: true
+  goss:
+    installed: true
 
 command:
   ufw status:
@@ -308,6 +317,8 @@ command:
     stdout:
       - "/Status: active/"
   aa-status --enabled:
+    exit-status: 0
+  goss -g /etc/goss/goss.yaml validate:
     exit-status: 0
 ```
 
@@ -365,7 +376,7 @@ sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --on
 sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --off
 
 # Depuis LocalStack
-awslocal s3 cp s3://asip-backup/<path> /restore/<path> --endpoint-url=http://localhost:4566
+aws --endpoint-url=http://localhost:4566 s3 cp s3://asip-backup/<path> /restore/<path>
 ```
 
 ---

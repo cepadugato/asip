@@ -33,6 +33,12 @@ services:
       - ./volume:/var/lib/localstack       # Persistance des données
       - ./init:/etc/localstack/init/ready.d  # Initialization hooks
       - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 ```
 
 ### Démarrage
@@ -72,11 +78,11 @@ LocalStack exécute automatiquement les scripts dans `/etc/localstack/init/ready
 # Crée les buckets S3 avec configuration de production-like
 
 # Bucket de sauvegarde
-awslocal s3 mb s3://asip-backup
-awslocal s3api put-bucket-versioning \
+aws --endpoint-url=http://localhost:4566 s3 mb s3://asip-backup
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-versioning \
   --bucket asip-backup \
   --versioning-configuration Status=Enabled
-awslocal s3api put-bucket-lifecycle-configuration \
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-lifecycle-configuration \
   --bucket asip-backup \
   --lifecycle-configuration '{
     "Rules": [{
@@ -88,11 +94,11 @@ awslocal s3api put-bucket-lifecycle-configuration \
   }'
 
 # Bucket de documents
-awslocal s3 mb s3://asip-documents
-awslocal s3api put-bucket-versioning \
+aws --endpoint-url=http://localhost:4566 s3 mb s3://asip-documents
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-versioning \
   --bucket asip-documents \
   --versioning-configuration Status=Enabled
-awslocal s3api put-bucket-lifecycle-configuration \
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-lifecycle-configuration \
   --bucket asip-documents \
   --lifecycle-configuration '{
     "Rules": [{
@@ -100,6 +106,21 @@ awslocal s3api put-bucket-lifecycle-configuration \
       "Status": "Enabled",
       "Prefix": "",
       "Expiration": { "Days": 90 }
+    }]
+  }'
+
+# Bucket d'état Terraform
+aws --endpoint-url=http://localhost:4566 s3 mb s3://asip-terraform-state
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-versioning \
+  --bucket asip-terraform-state \
+  --versioning-configuration Status=Enabled
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-encryption \
+  --bucket asip-terraform-state \
+  --server-side-encryption-configuration '{
+    "Rules": [{
+      "ApplyServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+      }
     }]
   }'
 
@@ -113,11 +134,11 @@ echo "Buckets S3 created successfully"
 # Crée les utilisateurs et politiques IAM
 
 # Utilisateur de sauvegarde
-awslocal iam create-user --user-name asip-backup-agent
-awslocal iam create-access-key --user-name asip-backup-agent
+aws --endpoint-url=http://localhost:4566 iam create-user --user-name asip-backup-agent
+aws --endpoint-url=http://localhost:4566 iam create-access-key --user-name asip-backup-agent
 
 # Politique de sauvegarde (accès complet sur asip-backup uniquement)
-awslocal iam put-user-policy \
+aws --endpoint-url=http://localhost:4566 iam put-user-policy \
   --user-name asip-backup-agent \
   --policy-name AsipBackupPolicy \
   --policy-document '{
@@ -133,9 +154,9 @@ awslocal iam put-user-policy \
   }'
 
 # Utilisateur de synchronisation documents
-awslocal iam create-user --user-name asip-docs-sync
-awslocal iam create-access-key --user-name asip-docs-sync
-awslocal iam put-user-policy \
+aws --endpoint-url=http://localhost:4566 iam create-user --user-name asip-docs-sync
+aws --endpoint-url=http://localhost:4566 iam create-access-key --user-name asip-docs-sync
+aws --endpoint-url=http://localhost:4566 iam put-user-policy \
   --user-name asip-docs-sync \
   --policy-name AsipDocsSyncPolicy \
   --policy-document '{
@@ -152,9 +173,33 @@ awslocal iam put-user-policy \
     ]
   }'
 
+# Utilisateur watchdog (agent IA surveillance)
+aws --endpoint-url=http://localhost:4566 iam create-user --user-name asip-watchdog
+aws --endpoint-url=http://localhost:4566 iam create-access-key --user-name asip-watchdog
+aws --endpoint-url=http://localhost:4566 iam put-user-policy \
+  --user-name asip-watchdog \
+  --policy-name AsipWatchdogPolicy \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["s3:GetObject", "s3:ListBucket"],
+        "Resource": [
+          "arn:aws:s3:::asip-backup",
+          "arn:aws:s3:::asip-backup/*",
+          "arn:aws:s3:::asip-documents",
+          "arn:aws:s3:::asip-documents/*",
+          "arn:aws:s3:::asip-terraform-state",
+          "arn:aws:s3:::asip-terraform-state/*"
+        ]
+      }
+    ]
+  }'
+
 # Rôle cross-account pour scénarios avancés
-awslocal iam create-role \
-  --role-name asip-backup-role \
+aws --endpoint-url=http://localhost:4566 iam create-role \
+  --role-name asip-cross-account-role \
   --assume-role-policy-document '{
     "Version": "2012-10-17",
     "Statement": [{
@@ -163,9 +208,9 @@ awslocal iam create-role \
       "Action": "sts:AssumeRole"
     }]
   }'
-awslocal iam put-role-policy \
-  --role-name asip-backup-role \
-  --policy-name AsipBackupRolePolicy \
+aws --endpoint-url=http://localhost:4566 iam put-role-policy \
+  --role-name asip-cross-account-role \
+  --policy-name AsipCrossAccountRolePolicy \
   --policy-document '{
     "Version": "2012-10-17",
     "Statement": [{
@@ -173,7 +218,9 @@ awslocal iam put-role-policy \
       "Action": ["s3:GetObject", "s3:ListBucket"],
       "Resource": [
         "arn:aws:s3:::asip-backup",
-        "arn:aws:s3:::asip-backup/*"
+        "arn:aws:s3:::asip-backup/*",
+        "arn:aws:s3:::asip-terraform-state",
+        "arn:aws:s3:::asip-terraform-state/*"
       ]
     }]
   }'
@@ -234,21 +281,49 @@ output "is_localstack" {
 
 Le fichier `localstack/terraform/main.tf` déclare les mêmes ressources que les init hooks, mais de manière déclarative et versionnée. Celles-ci peuvent être utilisées à la place des hooks, ou en complément pour des scénarios plus avancés.
 
+### Bucket `asip-terraform-state`
+
+Le bucket `asip-terraform-state` est utilisé pour stocker l'état Terraform (state + lock) :
+
+- **Versioning** : Activé — permet de revenir à un état précédent
+- **Chiffrement** : AES256 (server-side encryption) — les fichiers d'état contiennent des informations sensibles
+- **Cycle de vie** : Pas d'expiration — l'état Terraform doit être conservé indéfiniment
+- **Accès** : Restreint via la politique IAM `asip-cross-account-role`
+
+```bash
+# Vérifier le chiffrement du bucket
+aws --endpoint-url=http://localhost:4566 s3api get-bucket-encryption --bucket asip-terraform-state
+
+# Vérifier le versioning
+aws --endpoint-url=http://localhost:4566 s3api get-bucket-versioning --bucket asip-terraform-state
+```
+
 ---
 
 ## Utilisation avec rclone
 
 ### Configuration rclone
 
-Sur les VMs (vault-server, collab-server), le rôle Ansible `hybrid-storage` configure rclone :
+Sur les VMs (vault-server, collab-server, mcp-watchdog), le rôle Ansible `hybrid-storage` configure deux remotes rclone :
 
 ```ini
-[asip-s3]
+# Remote principal — LocalStack (mock S3)
+[localstack]
 type = s3
 provider = Other
 env_auth = false
 access_key_id = test
 secret_access_key = test
+endpoint = http://localhost:4566
+force_path_style = true
+
+# Remote secondaire — avec credentials IAM dédiés
+[asip-s3]
+type = s3
+provider = Other
+env_auth = false
+access_key_id = <iam_access_key>
+secret_access_key = <iam_secret_key>
 endpoint = http://localhost:4566
 force_path_style = true
 ```

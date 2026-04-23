@@ -15,8 +15,9 @@ A.S.I.P. étend l'infrastructure Proxmox existante (21 VMs + 2 routeurs OPNsense
 | **opnsense-router** | WAN + 10-50 | 10.10.20.1 | 2 | 2G | 16G | 99 | Firewall/routeur primaire (CARP) |
 | **opnsense-router-2** | WAN + 10-50 | 10.10.20.2 | 2 | 2G | 16G | 98 | Firewall/routeur backup (CARP) |
 | **bastion** | 10 | 10.10.10.5 | 1 | 1G | 16G | 100 | SSH bastion + step-ca CA |
-| **monitoring-server** | 10 | 10.10.10.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki, Forgejo Runner |
-| **mcp-watchdog** | 10 | 10.10.10.50 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation |
+| **monitoring-server** | 10 | 10.10.10.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki |
+| **mcp-watchdog** | — | 192.168.100.119 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04) |
+| **forgejo-runner** | — | 192.168.100.120 | 2 | 4G | 64G | 120 | Forgejo Runner v0.2.11 CI/CD (LXC Ubuntu 22.04) |
 | **pg-node-1** | 10 | 10.10.10.30 | 2 | 4G | 64G | 102 | PostgreSQL Patroni nœud 1 |
 | **pg-node-2** | 10 | 10.10.10.31 | 2 | 4G | 64G | 103 | PostgreSQL Patroni nœud 2 |
 | **pg-node-3** | 10 | 10.10.10.32 | 2 | 4G | 64G | 104 | PostgreSQL Patroni nœud 3 |
@@ -137,7 +138,13 @@ Le stockage hybride est la brique "SIMULATE" d'A.S.I.P. Il simule un scénario d
 │  10.10.30.10          │  sync    │  Versioning+Lifecycle│
 │                       │          │                      │
 │  mcp-watchdog         │ ──────── │  IAM users/policies  │
-│  10.10.10.50          │  boto3   │  (asip-backup-agent) │
+│  192.168.100.119      │  boto3   │  (asip-backup-agent) │
+│  (LXC)                │          │                      │
+│                       │          │  asip-terraform-state│
+│                       │          │  (S3, AES256)         │
+│                       │          │                      │
+│                       │          │  IAM: asip-watchdog   │
+│                       │          │  (access to asip-*)  │
 └───────────────────────┘          └──────────────────────┘
         │                                    ▲
         │  VLAN 10/20/30                     │ localhost:4566
@@ -150,6 +157,7 @@ Le stockage hybride est la brique "SIMULATE" d'A.S.I.P. Il simule un scénario d
 |-------------------|---------------|-----------|-----------|
 | `asip-backup` | Vaults + configs Ansible | Quotidien (cron 02:00) | 30 jours |
 | `asip-documents` | Documents Nextcloud | Temps réel (rclone sync) | 90 jours |
+| `asip-terraform-state` | État Terraform (lock + state) | À chaque apply | Indéfini (versionné) |
 
 ### IAM LocalStack
 
@@ -157,7 +165,19 @@ Le stockage hybride est la brique "SIMULATE" d'A.S.I.P. Il simule un scénario d
 |-------------|------|-------|
 | `asip-backup-agent` | Sauvegarde automatisée | s3:FullAccess sur `asip-backup` |
 | `asip-docs-sync` | Synchronisation documents | s3:PutObject, s3:GetObject sur `asip-documents` |
-| `asip-cross-account` | Scénario cross-account | sts:AssumeRole sur `asip-backup-role` |
+| `asip-cross-account` | Scénario cross-account | sts:AssumeRole sur `asip-cross-account-role` |
+| `asip-watchdog` | Agent IA surveillance | s3:FullAccess sur `asip-*`, lecture état infrastructure |
+
+**Note** : mcp-watchdog est un container LXC (VMID 119), pas une VM. Cela permet une empreinte plus légère et un accès direct au kernel de l'hôte pour les vérifications Goss.
+
+### rclone Remotes
+
+Les VMs utilisent deux remotes rclone configurés par le rôle Ansible `hybrid-storage` :
+
+| Remote | Endpoint | Usage |
+|--------|----------|-------|
+| `localstack` | `http://localhost:4566` | Accès S3 LocalStack (mock, dev/test) |
+| `asip-s3` | `http://localhost:4566` | Accès S3 LocalStack (production-like), même endpoint, credentials IAM dédiés |
 
 ---
 
@@ -182,19 +202,20 @@ L'ordre de déploiement respecte les dépendances entre composants :
    │                                                       │
    ├── 6. Nextcloud + OnlyOffice + Mail ────────────────┤
    │                                                       │
-   ├── 7. Monitoring (Prometheus, Grafana, Loki)         │
-   │   └── Forgejo Runner (act_runner)                    │
-   │                                                       │
-   ├── 8. DMZ (nginx WAF + HAProxy) ────────────────────┤
-   │                                                       │
-   ├── 9. Domain Join (tous les serveurs) ───────────────┤
-   │                                                       │
-   ├── 10. Sécurité (Trivy, Goss, CrowdSec, AIDE) ──────┤
-   │                                                       │
-   └── 11. A.S.I.P. Additions                            │
-       ├── MCP Watchdog (VM + agent)                      │
-       ├── Hybrid Storage (rclone + LocalStack)           │
-       └── Forgejo Actions Workflows                      │
+    ├── 7. Monitoring (Prometheus, Grafana, Loki)         │
+    │   └── Forgejo Runner (LXC 120, v0.2.11)             │
+    │                                                       │
+    ├── 8. DMZ (nginx WAF + HAProxy) ────────────────────┤
+    │                                                       │
+    ├── 9. Domain Join (tous les serveurs) ───────────────┤
+    │                                                       │
+    ├── 10. Sécurité (Trivy, Goss, CrowdSec, AIDE) ──────┤
+    │                                                       │
+    └── 11. A.S.I.P. Additions                            │
+        ├── MCP Watchdog (LXC 119 + agent)                  │
+        ├── Forgejo Runner (LXC 120)                        │
+        ├── Hybrid Storage (rclone + LocalStack)           │
+        └── Forgejo Actions Workflows                      │
 ```
 
 ---
@@ -208,6 +229,6 @@ L'ordre de déploiement respecte les dépendances entre composants :
 | HTTPS | TCP:443 | Clients → DMZ | Proxy/LB | Accès services |
 | LDAPS | TCP:636 | Services → AD | ad-server | Auth LDAP |
 | Kerberos | TCP/UDP:88 | Toutes VMs → AD | ad-server | Auth SSO |
-| Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog | Alertes drift |
+| Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog (192.168.100.119) | Alertes drift |
 | S3 API | TCP:4566 | VMs → LocalStack | localhost | Stockage hybride |
-| Forgejo API | TCP:3000 | Runner → Forgejo | localhost | CI/CD |
+| Forgejo API | TCP:3000 | Runner → Forgejo | 192.168.100.1 | CI/CD |

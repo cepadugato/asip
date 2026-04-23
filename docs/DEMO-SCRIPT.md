@@ -8,8 +8,8 @@ Ce document décrit le scénario de démonstration pas-à-pas pour présenter le
 
 - LocalStack démarré sur le PC hôte (`localhost:4566`)
 - Forgejo accessible (`localhost:3000`)
-- Infrastructure Proxmox déployée (21 VMs + 2 routeurs)
-- MCP Watchdog opérationnel (`10.10.10.50:8080`)
+- Infrastructure Proxmox déployée (19 VMs + 2 routeurs + 2 LXC)
+- MCP Watchdog opérationnel (`192.168.100.119:8080`)
 - Agent IA OpenCode connecté via MCP
 
 ---
@@ -28,7 +28,7 @@ Ce document décrit le scénario de démonstration pas-à-pas pour présenter le
 **Ce qui se passe** :
 1. Génération des secrets (ansible-vault)
 2. Préparation des images OPNsense
-3. Terraform `init` + `plan` + `apply` (21 VMs + 2 routeurs)
+3. Terraform `init` + `plan` + `apply` (19 VMs + 2 routeurs + 2 LXC)
 4. Démarrage du routeur OPNsense + attente API
 5. Configuration OPNsense via Ansible
 6. Démarrage ordonné des VMs (AD → DHCP → PKI → Services → Collab → DMZ)
@@ -93,7 +93,7 @@ git push origin feature/test-security
 
 ```bash
 # Montrer la configuration SSH durcie sur une VM
-ssh ansible@10.10.10.5 "grep -E '^(PermitRoot|Password|MaxAuth|Ciphers|MACs)' /etc/ssh/sshd_config"
+ssh ansible@192.168.100.119 "grep -E '^(PermitRoot|Password|MaxAuth|Ciphers|MACs)' /etc/ssh/sshd_config"
 ```
 
 **Montrer** :
@@ -127,7 +127,7 @@ curl -s http://localhost:4566/_localstack/health | jq .
 ```bash
 # Les init hooks ont automatiquement créé les buckets et IAM
 # Vérifier les buckets :
-docker exec localstack-main awslocal s3 ls
+docker exec localstack-main aws --endpoint-url=http://localhost:4566 s3 ls
 ```
 
 **Résultat attendu** :
@@ -164,7 +164,7 @@ tflocal apply
 1. Crée un fichier test sur `vault-server` (on-prem)
 2. Configure rclone pour pointer vers LocalStack
 3. Sync le fichier vers `s3://asip-backup` (mock S3)
-4. Vérifie avec `awslocal s3 ls asip-backup`
+4. Vérifie avec `aws --endpoint-url=http://localhost:4566 s3 ls asip-backup`
 5. Supprime le fichier on-prem
 6. Restaure depuis LocalStack via `rclone copy`
 7. Vérifie l'intégrité du fichier restauré
@@ -176,8 +176,8 @@ tflocal apply
 
 ```bash
 # Montrer les utilisateurs et politiques IAM
-docker exec localstack-main awslocal iam list-users
-docker exec localstack-main awslocal iam list-policies
+docker exec localstack-main aws --endpoint-url=http://localhost:4566 iam list-users
+docker exec localstack-main aws --endpoint-url=http://localhost:4566 iam list-policies
 ```
 
 **Montrer** :
@@ -200,25 +200,25 @@ docker exec localstack-main awslocal iam list-policies
 ```
 
 **Résultat LLM** :
-> "L'infrastructure est saine. Les 20 VMs sont conformes. Aucun drift détecté."
+> "L'infrastructure est saine. Les VMs et LXCs sont conformes. Aucun drift détecté."
 
 ### Étape 4.2 : Injection d'un drift (simulation d'attaque)
 
 ```bash
-# Sur bastion : modifier la config SSH (dérive volontaire)
-ssh ansible@10.10.10.5 "sudo sed -i 's/^PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config"
-ssh ansible@10.10.10.5 "sudo systemctl restart sshd"
+# Sur LXC 119 (mcp-watchdog) : modifier la config SSH (dérive volontaire)
+ssh ansible@192.168.100.119 "sudo sed -i 's/^PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config"
+ssh ansible@192.168.100.119 "sudo systemctl restart sshd"
 ```
 
 **Parler** :
-> "Je simule ici une modification non autorisée de la configuration SSH sur le bastion. `PermitRootLogin` est passé de `no` à `yes`. C'est exactement le type de dérive que l'agent doit détecter et corriger."
+> "Je simule ici une modification non autorisée de la configuration SSH sur le mcp-watchdog (LXC 119). `PermitRootLogin` est passé de `no` à `yes`. C'est exactement le type de dérive que l'agent doit détecter et corriger."
 
 ### Étape 4.3 : Détection automatique
 
 **Dans les 30 secondes** (webhook) ou **5 minutes max** (poller) :
 
 ```
-[WATCHDOG] 14:30:15 — DRIFT DETECTED on bastion (10.10.10.5)
+[WATCHDOG] 14:30:15 — DRIFT DETECTED on mcp-watchdog (192.168.100.119)
 [WATCHDOG]   Failed checks: 2
 [WATCHDOG]   - file./etc/ssh/sshd_config.contains: expected "!/PermitRootLogin yes/"
 [WATCHDOG]   - service.sshd.running: restart needed
@@ -227,9 +227,9 @@ ssh ansible@10.10.10.5 "sudo systemctl restart sshd"
 ### Étape 4.4 : Auto-remédiation
 
 ```
-[WATCHDOG] 14:30:20 — REMEDIATION STARTED on bastion
-[WATCHDOG]   Action: ansible-playbook site.yml --tags hardening --limit bastion
-[WATCHDOG] 14:32:45 — REMEDIATION COMPLETED on bastion (exit=0, 145s)
+[WATCHDOG] 14:30:20 — REMEDIATION STARTED on mcp-watchdog
+[WATCHDOG]   Action: ansible-playbook site.yml --tags hardening --limit mcp-watchdog
+[WATCHDOG] 14:32:45 — REMEDIATION COMPLETED on mcp-watchdog (exit=0, 145s)
 ```
 
 **Ce qui se passe** :
@@ -244,7 +244,7 @@ ssh ansible@10.10.10.5 "sudo systemctl restart sshd"
 
 ```bash
 # Vérifier que le drift est corrigé
-ssh ansible@10.10.10.5 "grep PermitRootLogin /etc/ssh/sshd_config"
+ssh ansible@192.168.100.119 "grep PermitRootLogin /etc/ssh/sshd_config"
 # Résultat attendu : PermitRootLogin no
 
 # Via le LLM :
@@ -252,13 +252,13 @@ ssh ansible@10.10.10.5 "grep PermitRootLogin /etc/ssh/sshd_config"
 ```
 
 **Résultat LLM** :
-> "Oui, le bastion est redevenu conforme. Le drift sur la configuration SSH a été détecté à 14:30 et corrigé automatiquement en 145 secondes. PermitRootLogin est de nouveau à `no`. L'incident a été journalisé."
+> "Oui, le mcp-watchdog est redevenu conforme. Le drift sur la configuration SSH a été détecté à 14:30 et corrigé automatiquement en 145 secondes. PermitRootLogin est de nouveau à `no`. L'incident a été journalisé."
 
 ### Étape 4.6 : Journal d'audit
 
 ```bash
 # Montrer l'historique sur le watchdog
-ssh ansible@10.10.10.50 "cat /var/log/watchdog/audit.json | jq '.[-3:]'"
+ssh ansible@192.168.100.119 "cat /var/log/watchdog/audit.json | jq '.[-3:]'"
 ```
 
 **Montrer** :
@@ -271,7 +271,7 @@ ssh ansible@10.10.10.50 "cat /var/log/watchdog/audit.json | jq '.[-3:]'"
 ```bash
 # Injecter 3 drifts successifs sur le même host
 for i in 1 2 3; do
-  ssh ansible@10.10.10.5 "sudo sed -i 's/^PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config"
+  ssh ansible@192.168.100.119 "sudo sed -i 's/^PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config"
   sleep 360  # Attendre 6 min entre chaque
 done
 ```
