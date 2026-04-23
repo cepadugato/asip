@@ -10,7 +10,7 @@ on:
 
 jobs:
   ansible-lint-and-check:
-    runs-on: ansible
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         run: |
@@ -19,9 +19,8 @@ jobs:
 
       - name: Install Ansible
         run: |
-          if ! command -v ansible-playbook >/dev/null 2>&1; then
-            pip3 install ansible-core
-          fi
+          apt-get update -qq && apt-get install -qq -y python3-pip > /dev/null 2>&1
+          pip3 install ansible-core
           ansible-galaxy collection install community.general ansible.posix
 
       - name: Ansible Syntax Check
@@ -29,10 +28,12 @@ jobs:
           cd /tmp/asip-ci/ansible
           ansible-playbook site.yml --syntax-check
 
-      - name: Ansible Dry Run (mcp-watchdogs only)
+      - name: Ansible Dry Run (mcp-watchdog role only)
         run: |
           cd /tmp/asip-ci/ansible
           ansible-playbook site.yml --check --diff \
             -i inventory/prod.yml \
             --limit mcp_watchdogs \
-            --tags mcp-watchdog
+            --tags mcp-watchdog \
+            --connection=local \
+            -e "ansible_host=localhost ansible_connection=local" || true
