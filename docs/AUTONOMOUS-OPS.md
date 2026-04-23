@@ -16,8 +16,9 @@ Ce n'est pas une automatisation aveugle : l'agent évalue la sévérité, choisi
 │                                                                │
 │  ┌───────────────┐                    ┌──────────────────┐    │
 │  │  OpenCode     │  MCP Protocol      │  mcp-watchdog    │    │
-│  │  (Agent IA)   │ ◄────────────────► │  server.py       │    │
-│  │  GLM 5.1      │  (stdio JSON-RPC)  │  :8080           │    │
+│  │  (Agent IA)   │ ◄────────────────► │  (LXC 119)       │    │
+│  │  GLM 5.1      │  (stdio JSON-RPC)  │  192.168.100.119 │    │
+│  │               │                    │  server.py :8080 │    │
 │  └───────────────┘                    └────────┬─────────┘    │
 │                                                 │              │
 │  ┌──────────────────────────────────────────────┼──────────┐  │
@@ -25,8 +26,8 @@ Ce n'est pas une automatisation aveugle : l'agent évalue la sévérité, choisi
 │  │                                              │          │  │
 │  │  ┌─────────────┐    ┌──────────────────┐     │          │  │
 │  │  │   POLLER    │    │  WEBHOOK LISTENER │     │          │  │
-│  │  │  (timer)    │    │  (POST /webhook)  │     │          │  │
-│  │  │  5 min      │    │  Real-time       │     │          │  │
+│  │  │  (goss-poll │    │  (POST /webhook)  │     │          │  │
+│  │  │   .sh/timer)│    │  Real-time       │     │          │  │
 │  │  └──────┬──────┘    └────────┬──────────┘     │          │  │
 │  │         │                    │                │          │  │
 │  │  ┌──────▼────────────────────▼──────────┐    │          │  │
@@ -63,19 +64,22 @@ Ce n'est pas une automatisation aveugle : l'agent évalue la sévérité, choisi
 
 ### 1. Poller (polling cyclique)
 
-Le poller s'exécute toutes les 5 minutes via un timer systemd. Pour chaque VM de l'inventaire :
+Le poller s'exécute toutes les 5 minutes via un timer systemd. Il tourne localement sur LXC 119 (mcp-watchdog) et exécute Goss directement pour chaque hôte de l'inventaire :
 
-1. SSH vers la VM
-2. Lit `/var/log/goss/goss-results.json` (dernier résultat Goss)
+1. Exécute `goss validate` localement via `goss-poll.sh` qui enrichit les résultats (ajoute horodatage, hostname, IP)
+2. Analyse `/var/log/goss/goss-results.json` (dernier résultat Goss)
 3. Évalue le `failed-count`
 4. Si drift détecté, transmet au State Engine
 
 ```python
 # Extrait du poller
 def poll_host(host_ip: str) -> DriftResult:
-    """Interroge Goss sur une VM distante via SSH."""
-    result = ssh_execute(host_ip, "cat /var/log/goss/goss-results.json")
-    goss_data = json.loads(result)
+    """Exécute Goss localement et analyse les résultats enrichis."""
+    result = subprocess.run(
+        ["goss", "-g", f"/etc/goss/{host_ip}.yaml", "validate", "--format", "json"],
+        capture_output=True, text=True
+    )
+    goss_data = json.loads(result.stdout)
     failed = goss_data.get("summary", {}).get("failed-count", 0)
     return DriftResult(host=host_ip, failed_count=failed, checks=goss_data)
 ```
@@ -85,12 +89,12 @@ def poll_host(host_ip: str) -> DriftResult:
 Le webhook listener est un endpoint FastAPI qui reçoit les alertes push des VMs. Chaque VM configure son timer Goss pour POSTer vers le watchdog après chaque validation :
 
 ```
-POST http://10.10.10.50:8080/webhook/goss
+POST http://192.168.100.119:8080/webhook/goss
 Content-Type: application/json
 
 {
   "host": "bastion",
-  "ip": "10.10.10.5",
+  "ip": "192.168.100.5",
   "timestamp": "2026-04-21T14:30:00Z",
   "summary": {
     "total-count": 15,
@@ -256,7 +260,7 @@ Type=simple
 User=watchdog
 Group=watchdog
 WorkingDirectory=/opt/asip/mcp-agent
-ExecStart=/opt/asip/mcp-agent/venv/bin/python server.py
+ExecStart=/opt/asip/mcp-agent/venv/bin/python server.py --config /opt/asip/mcp-agent/config.yaml
 Restart=always
 RestartSec=10
 Environment=WATCHDOG_CONFIG=/opt/asip/mcp-agent/config.yaml
@@ -279,6 +283,19 @@ AccuracySec=30
 WantedBy=timers.target
 ```
 
+```ini
+# /etc/systemd/system/goss-poll.service
+[Unit]
+Description=A.S.I.P. Goss Poll — Local Validation
+After=network.target
+
+[Service]
+Type=oneshot
+User=watchdog
+Group=watchdog
+ExecStart=/opt/asip/scripts/goss-poll.sh --config /opt/asip/mcp-agent/config.yaml
+```
+
 ---
 
 ## Journal d'audit
@@ -290,7 +307,7 @@ Chaque action du watchdog est journalisée dans `/var/log/watchdog/` :
   "timestamp": "2026-04-21T14:30:15Z",
   "event": "drift_detected",
   "host": "bastion",
-  "ip": "10.10.10.5",
+  "ip": "192.168.100.5",
   "source": "webhook",
   "failed_checks": 2,
   "checks": ["file./etc/ssh/sshd_config", "service.crowdsec.running"]
