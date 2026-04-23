@@ -128,13 +128,12 @@ echo ""
 # -------------------------------------------------------------------------------------------------
 # Forgejo Runner
 # -------------------------------------------------------------------------------------------------
-echo "--- Forgejo Runner (LXC 120) ---"
-RUNNER_IP="${RUNNER_IP:-192.168.100.120}"
+echo "--- Forgejo Runner (PC hôte) ---"
 
-if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 root@${RUNNER_IP} "systemctl is-active forgejo-runner" 2>/dev/null | grep -q "active"; then
-    ok "Forgejo runner service active on ${RUNNER_IP}"
+if systemctl --user is-active forgejo-runner.service 2>/dev/null | grep -q "active"; then
+    ok "Forgejo runner service active (systemd user service)"
 else
-    fail "Forgejo runner service not active on ${RUNNER_IP}"
+    fail "Forgejo runner service not active"
 fi
 
 echo ""

@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-A.S.I.P. étend l'infrastructure Proxmox existante (21 VMs + 2 routeurs OPNsense) avec un agent de surveillance IA et une simulation de cloud hybride. L'architecture repose sur 3 zones : le cluster Proxmox (on-premise), le PC hôte (Forgejo + LocalStack), et le canal MCP entre les deux.
+A.S.I.P. étend l'infrastructure Proxmox existante (19 VMs + 1 LXC + 2 routeurs OPNsense) avec un agent de surveillance IA et une simulation de cloud hybride. L'architecture repose sur 3 zones : le cluster Proxmox (on-premise), le PC hôte (Forgejo + LocalStack + Runner), et le canal MCP entre les deux.
 
 ---
 
@@ -17,7 +17,6 @@ A.S.I.P. étend l'infrastructure Proxmox existante (21 VMs + 2 routeurs OPNsense
 | **bastion** | 10 | 10.10.10.5 | 1 | 1G | 16G | 100 | SSH bastion + step-ca CA |
 | **monitoring-server** | 10 | 10.10.10.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki |
 | **mcp-watchdog** | — | 192.168.100.119 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04) |
-| **forgejo-runner** | — | 192.168.100.120 | 2 | 4G | 64G | 120 | Forgejo Runner v0.2.11 CI/CD (LXC Ubuntu 22.04) |
 | **pg-node-1** | 10 | 10.10.10.30 | 2 | 4G | 64G | 102 | PostgreSQL Patroni nœud 1 |
 | **pg-node-2** | 10 | 10.10.10.31 | 2 | 4G | 64G | 103 | PostgreSQL Patroni nœud 2 |
 | **pg-node-3** | 10 | 10.10.10.32 | 2 | 4G | 64G | 104 | PostgreSQL Patroni nœud 3 |
@@ -43,6 +42,20 @@ A.S.I.P. étend l'infrastructure Proxmox existante (21 VMs + 2 routeurs OPNsense
 | Forgejo | 3000 | Usine logicielle privée (Git + CI/CD Actions) |
 | LocalStack | 4566 | Simulation AWS S3 + IAM |
 | OpenCode | — | Agent IA (GLM 5.1) + serveurs MCP |
+| Forgejo Runner | — | CI/CD runner (systemd user service, Docker containers) |
+
+### Forgejo Runner — Service systemd user
+
+Le Forgejo Runner s'exécute désormais sur le PC hôte en tant que service systemd user (anciennement LXC 120, supprimé).
+
+| Propriété | Valeur |
+|-----------|--------|
+| Service | `forgejo-runner.service` (systemd user) |
+| Configuration | `/mnt/6D33430F1C940A7B/Documents/opencode/.runner-home/config.yaml` |
+| Unit file | `/home/fred/.config/systemd/user/forgejo-runner.service` |
+| Gestion | `systemctl --user start/stop/status forgejo-runner.service` |
+| Mode d'exécution | Docker containers (`docker://node:22-bookworm`) |
+| Labels | `ubuntu-latest:docker://node:22-bookworm`, `ansible:docker://node:22-bookworm` |
 
 ---
 
@@ -202,20 +215,20 @@ L'ordre de déploiement respecte les dépendances entre composants :
    │                                                       │
    ├── 6. Nextcloud + OnlyOffice + Mail ────────────────┤
    │                                                       │
-    ├── 7. Monitoring (Prometheus, Grafana, Loki)         │
-    │   └── Forgejo Runner (LXC 120, v0.2.11)             │
-    │                                                       │
-    ├── 8. DMZ (nginx WAF + HAProxy) ────────────────────┤
+     ├── 7. Monitoring (Prometheus, Grafana, Loki)         │
+     │   └── Forgejo Runner (PC hôte, v0.2.11, Docker)     │
+     │                                                       │
+     ├── 8. DMZ (nginx WAF + HAProxy) ────────────────────┤
     │                                                       │
     ├── 9. Domain Join (tous les serveurs) ───────────────┤
     │                                                       │
     ├── 10. Sécurité (Trivy, Goss, CrowdSec, AIDE) ──────┤
     │                                                       │
-    └── 11. A.S.I.P. Additions                            │
-        ├── MCP Watchdog (LXC 119 + agent)                  │
-        ├── Forgejo Runner (LXC 120)                        │
-        ├── Hybrid Storage (rclone + LocalStack)           │
-        └── Forgejo Actions Workflows                      │
+     └── 11. A.S.I.P. Additions                            │
+         ├── MCP Watchdog (LXC 119 + agent)                  │
+         ├── Forgejo Runner (PC hôte, systemd user)           │
+         ├── Hybrid Storage (rclone + LocalStack)           │
+         └── Forgejo Actions Workflows                      │
 ```
 
 ---
@@ -231,4 +244,4 @@ L'ordre de déploiement respecte les dépendances entre composants :
 | Kerberos | TCP/UDP:88 | Toutes VMs → AD | ad-server | Auth SSO |
 | Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog (192.168.100.119) | Alertes drift |
 | S3 API | TCP:4566 | VMs → LocalStack | localhost | Stockage hybride |
-| Forgejo API | TCP:3000 | Runner → Forgejo | 192.168.100.1 | CI/CD |
+| Forgejo API | TCP:3000 | Runner → Forgejo | PC hôte (localhost) | CI/CD |

@@ -336,7 +336,7 @@ command:
 | Smallstep CA root key | HSM / air-gapped | Jamais | Stockage physique |
 | TLS certificates | step-ca ACME | 90 jours (auto) | Smallstep |
 | Proxmox API token | Proxmox UI + tfvars | Semestrielle | Régénération manuelle |
-| Forgejo runner token | Forgejo UI | Annuelle | `forgejo runner register` |
+| Forgejo runner token | Forgejo UI | Annuelle | `forgejo runner register` (sur PC hôte) |
 | LocalStack mock keys | Hardcodés `test/test` | N/A | Pas de secrets réels (mock) |
 
 ### ansible-vault

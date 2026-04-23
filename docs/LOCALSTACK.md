@@ -25,7 +25,7 @@ services:
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway
     environment:
-      - SERVICES=s3,iam
+      - SERVICES=s3,iam,sts
       - AWS_DEFAULT_REGION=eu-west-1
       - PERSISTENCE=1                      # Persistance entre redémarrages
       - DEBUG=0
@@ -239,13 +239,23 @@ Le provider AWS est configuré pour pointer vers LocalStack. Deux approches poss
 #### Approche 1 : `tflocal` (recommandé)
 
 ```bash
-pip install terraform-local
+pipx install terraform-local
 tflocal init
 tflocal plan
 tflocal apply
 ```
 
 `tflocal` génère automatiquement un override qui configure tous les endpoints vers `localhost:4566`.
+
+> **Note** : Utilisez `pipx install terraform-local` (et non `pip install`). `pipx` est la méthode recommandée pour installer des exécutables Python en isolation.
+
+#### Variable d'environnement AWS
+
+Pour que le provider AWS pointe vers LocalStack sans utiliser `tflocal`, la variable d'environnement correcte est `AWS_ENDPOINT_URL` (pas `LOCALSTACK_ENDPOINT`) :
+
+```bash
+export AWS_ENDPOINT_URL=http://localhost:4566
+```
 
 #### Approche 2 : Configuration manuelle
 
@@ -378,6 +388,7 @@ LocalStack est accessible uniquement sur `127.0.0.1:4566` (localhost). Les VMs y
 | Pas de IAM enforcement | LocalStack n'enforce pas les politiques IAM par défaut (Pro feature) |
 | Persistance | Activée via `PERSISTENCE=1`, mais les données sont éphémères par conception |
 | S3 Path Style | Nécessaire (`s3_use_path_style = true`) car DNS virtuel non résolvable |
+| STS requis pour `aws_caller_identity` | Le service `sts` doit être inclus dans `SERVICES` (`SERVICES=s3,iam,sts`) sinon la data source Terraform `aws_caller_identity` retourne une erreur 500 |
 
 ---
 
