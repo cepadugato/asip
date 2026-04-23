@@ -15,22 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Goss
         run: |
-          curl -fsSL https://github.com/goss-org/goss/releases/download/v0.4.8/goss-linux-amd64 -o /usr/local/bin/goss
-          chmod +x /usr/local/bin/goss
+          rm -rf /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
 
-      - name: Run Goss validation on watchdog (self-check)
+      - name: Check watchdog status (self-check)
         run: |
-          mkdir -p goss-results
+          mkdir -p /tmp/asip-ci/goss-results
           for host_ip in 192.168.100.119; do
-            curl -sf "http://${host_ip}:8080/status" > "goss-results/${host_ip}.json" 2>/dev/null || echo '{}' > "goss-results/${host_ip}.json"
+            curl -sf "http://${host_ip}:8080/status" > "/tmp/asip-ci/goss-results/${host_ip}.json" 2>/dev/null || echo '{}' > "/tmp/asip-ci/goss-results/${host_ip}.json"
           done
 
       - name: Check for drift
         run: |
+          cd /tmp/asip-ci
           python3 -c "
           import json, glob, sys
           total_failed = 0
@@ -53,10 +51,3 @@ jobs:
           else:
               print('No drift detected - all hosts conformant')
           "
-
-      - name: Upload drift results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: goss-results
-          path: goss-results/*.json

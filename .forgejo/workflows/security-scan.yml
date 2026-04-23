@@ -17,26 +17,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        run: |
+          rm -rf /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
 
       - name: Install Trivy
         run: |
-          curl -fsSL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz -o /tmp/trivy.tar.gz
-          tar -xzf /tmp/trivy.tar.gz -C /tmp
-          mv /tmp/trivy /usr/local/bin/trivy
-          chmod +x /usr/local/bin/trivy
+          if ! command -v trivy >/dev/null 2>&1; then
+            curl -fsSL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz -o /tmp/trivy.tar.gz
+            tar -xzf /tmp/trivy.tar.gz -C /tmp
+            mv /tmp/trivy /usr/local/bin/trivy
+            chmod +x /usr/local/bin/trivy
+          fi
 
       - name: Scan IaC and Python code for vulnerabilities
         run: |
+          cd /tmp/asip-ci
           trivy fs --severity CRITICAL,HIGH --format json --output trivy-fs-results.json . || true
           trivy fs --severity CRITICAL,HIGH --format table . || true
 
       - name: Scan Terraform for misconfigurations
         run: |
+          cd /tmp/asip-ci
           trivy config --severity CRITICAL,HIGH --format json --output trivy-tf-results.json terraform/ localstack/terraform/ || true
 
       - name: Evaluate results
         run: |
+          cd /tmp/asip-ci
           python3 -c "
           import json, glob, sys
           total = 0
@@ -61,10 +68,3 @@ jobs:
               sys.exit(1)
           print('PASSED: No critical vulnerabilities')
           "
-
-      - name: Upload scan results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-results
-          path: trivy-*.json

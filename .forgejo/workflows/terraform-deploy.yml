@@ -13,52 +13,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        run: |
+          rm -rf /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
 
       - name: Install tflocal
-        run: pip install terraform-local
-
-      - name: Start LocalStack
-        run: |
-          cd localstack
-          docker compose up -d
-          sleep 15
+        run: pip3 install terraform-local
 
       - name: Terraform Init LocalStack
         run: |
-          cd localstack/terraform
-          tflocal init -input=false
+          cd /tmp/asip-ci/localstack/terraform
+          AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 tflocal init -input=false
 
       - name: Terraform Plan LocalStack
         run: |
-          cd localstack/terraform
-          tflocal plan -out=tfplan
+          cd /tmp/asip-ci/localstack/terraform
+          AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 tflocal plan -out=tfplan
 
       - name: Terraform Apply LocalStack
         if: github.ref == 'refs/heads/main'
         run: |
-          cd localstack/terraform
-          tflocal apply -auto-approve tfplan
+          cd /tmp/asip-ci/localstack/terraform
+          AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 tflocal apply -auto-approve tfplan
 
   terraform-proxmox-plan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        run: |
+          rm -rf /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
 
       - name: Setup Terraform
         run: |
-          curl -fsSL https://releases.hashicorp.com/terraform/1.13.1/terraform_1.13.1_linux_amd64.zip -o /tmp/terraform.zip
-          unzip /tmp/terraform.zip -d /usr/local/bin/
-          chmod +x /usr/local/bin/terraform
+          if ! command -v terraform >/dev/null 2>&1; then
+            curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux-amd64.zip -o /tmp/terraform.zip
+            unzip /tmp/terraform.zip -d /usr/local/bin/
+            chmod +x /usr/local/bin/terraform
+          fi
           terraform version
 
       - name: Terraform Init
         run: |
-          cd terraform
+          cd /tmp/asip-ci/terraform
           terraform init -upgrade
 
       - name: Terraform Plan (read-only)
         run: |
-          cd terraform
+          cd /tmp/asip-ci/terraform
           terraform plan -input=false -parallelism=1 -var="proxmox_token=${{ secrets.PROXMOX_TOKEN }}" -out=tfplan
