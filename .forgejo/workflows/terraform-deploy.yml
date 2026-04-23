@@ -19,8 +19,9 @@ jobs:
 
       - name: Install tflocal and Terraform
         run: |
-          apt-get update -qq && apt-get install -qq -y python3-pip > /dev/null 2>&1
-          pip3 install --break-system-packages terraform-local
+          apt-get update -qq && apt-get install -qq -y pipx > /dev/null 2>&1
+          pipx install terraform-local
+          pipx ensurepath
           # Also install terraform CLI for tflocal to work
           if ! command -v terraform >/dev/null 2>&1; then
             curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/terraform.zip
@@ -33,14 +34,14 @@ jobs:
         run: |
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
-            LOCALSTACK_ENDPOINT=http://192.168.100.1:4566 \
+            AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
             tflocal init -input=false
 
       - name: Terraform Plan LocalStack
         run: |
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
-            LOCALSTACK_ENDPOINT=http://192.168.100.1:4566 \
+            AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
             tflocal plan -out=tfplan
 
       - name: Terraform Apply LocalStack
@@ -48,7 +49,7 @@ jobs:
         run: |
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
-            LOCALSTACK_ENDPOINT=http://192.168.100.1:4566 \
+            AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
             tflocal apply -auto-approve tfplan
 
   terraform-proxmox-plan:
