@@ -26,7 +26,9 @@ else
     fail "LocalStack is not running (expected localhost:4566)"
 fi
 
-AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_DEFAULT_REGION=eu-west-1
 if aws --endpoint-url=http://localhost:4566 s3 ls 2>/dev/null | grep -q "asip-backup"; then
     ok "S3 bucket 'asip-backup' exists"
 else
@@ -149,7 +151,7 @@ else
     warn "rclone not found at ${RCLONE}"
 fi
 
-if [ -x "${RCLONE}" ] && ${RCLCLONE} ls localstack:asip-backup 2>/dev/null; then
+if [ -x "${RCLONE}" ] && ${RCLONE} ls localstack:asip-backup 2>/dev/null; then
     ok "rclone can access LocalStack S3 buckets"
 else
     warn "rclone LocalStack connection not tested"

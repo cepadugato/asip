@@ -1,24 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
+AWS="aws --endpoint-url=http://localhost:4566 --region eu-west-1"
+
 echo "=== ASIP LocalStack: Creating S3 buckets ==="
 
-# asip-backup — backup storage with versioning and lifecycle
-awslocal s3 mb s3://asip-backup
-awslocal s3api put-bucket-versioning \
+# asip-backup — backup storage with versioning and encryption
+$AWS s3 mb s3://asip-backup 2>/dev/null || echo "Bucket asip-backup already exists"
+$AWS s3api put-bucket-versioning \
   --bucket asip-backup \
-  --versioning-configuration Status=Enabled
-awslocal s3api put-bucket-lifecycle-configuration \
-  --bucket asip-backup \
-  --lifecycle-configuration '{
-    "Rules": [{
-      "ID": "ExpireAfter30Days",
-      "Status": "Enabled",
-      "Prefix": "",
-      "Expiration": { "Days": 30 }
-    }]
-  }'
-awslocal s3api put-bucket-encryption \
+  --versioning-configuration Status=Enabled 2>/dev/null || true
+$AWS s3api put-bucket-encryption \
   --bucket asip-backup \
   --server-side-encryption-configuration '{
     "Rules": [{
@@ -26,24 +18,14 @@ awslocal s3api put-bucket-encryption \
         "SSEAlgorithm": "AES256"
       }
     }]
-  }'
+  }' 2>/dev/null || true
 
-# asip-documents — document sync with longer retention
-awslocal s3 mb s3://asip-documents
-awslocal s3api put-bucket-versioning \
+# asip-documents — document sync with versioning and encryption
+$AWS s3 mb s3://asip-documents 2>/dev/null || echo "Bucket asip-documents already exists"
+$AWS s3api put-bucket-versioning \
   --bucket asip-documents \
-  --versioning-configuration Status=Enabled
-awslocal s3api put-bucket-lifecycle-configuration \
-  --bucket asip-documents \
-  --lifecycle-configuration '{
-    "Rules": [{
-      "ID": "ExpireAfter90Days",
-      "Status": "Enabled",
-      "Prefix": "",
-      "Expiration": { "Days": 90 }
-    }]
-  }'
-awslocal s3api put-bucket-encryption \
+  --versioning-configuration Status=Enabled 2>/dev/null || true
+$AWS s3api put-bucket-encryption \
   --bucket asip-documents \
   --server-side-encryption-configuration '{
     "Rules": [{
@@ -51,6 +33,9 @@ awslocal s3api put-bucket-encryption \
         "SSEAlgorithm": "AES256"
       }
     }]
-  }'
+  }' 2>/dev/null || true
 
-echo "S3 buckets created: asip-backup, asip-documents"
+# asip-terraform-state — Terraform state backend
+$AWS s3 mb s3://asip-terraform-state 2>/dev/null || echo "Bucket asip-terraform-state already exists"
+
+echo "S3 buckets created: asip-backup, asip-documents, asip-terraform-state"
