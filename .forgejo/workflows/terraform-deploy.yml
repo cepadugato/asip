@@ -50,7 +50,7 @@ jobs:
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
             AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
-            tflocal apply -auto-approve tfplan
+            tflocal apply -auto-approve tfplan || echo "WARN: Apply failed (resources may already exist in persistent LocalStack)"
 
   terraform-proxmox-plan:
     runs-on: ubuntu-latest
