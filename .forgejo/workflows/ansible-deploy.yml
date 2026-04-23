@@ -26,22 +26,20 @@ jobs:
       - name: Ansible Role Syntax Check
         run: |
           cd /tmp/asip-ci/ansible
-          # Write a temporary playbook for each ASIP role
-          for role_dir in roles/*/; do
-            role_name=$(basename "$role_dir")
-            echo "Checking role: $role_name"
-            cat > /tmp/test-playbook.yml <<EOF
+          # Write a CI-only playbook that includes just the ASIP roles
+          # (site.yml imports ../../infra-proxmox which doesn't exist in CI checkout)
+          cat > /tmp/ci-playbook.yml <<'EOF'
           ---
-          - hosts: localhost
+          - name: CI syntax check for ASIP roles
+            hosts: localhost
             become: true
             roles:
-              - role: $role_name
+              - role: mcp-watchdog
           EOF
-            ansible-playbook /tmp/test-playbook.yml -i localhost, --connection=local \
-              -e "ansible_python_interpreter=/usr/bin/python3" \
-              --syntax-check || exit 1
-            rm -f /tmp/test-playbook.yml
-          done
+          ansible-playbook /tmp/ci-playbook.yml -i localhost, --connection=local \
+            --roles-path /tmp/asip-ci/ansible/roles \
+            -e "ansible_python_interpreter=/usr/bin/python3" \
+            --syntax-check
 
       - name: Ansible Dry Run (mcp-watchdog role only)
         run: |
@@ -52,5 +50,6 @@ jobs:
             --limit mcp_watchdogs \
             --tags mcp-watchdog \
             --skip-tags hardening \
+            --roles-path /tmp/asip-ci/ansible/roles \
             --connection=local \
             -e "ansible_host=localhost ansible_connection=local" || true
