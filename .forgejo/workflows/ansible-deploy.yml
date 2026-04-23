@@ -36,8 +36,8 @@ jobs:
             roles:
               - role: mcp-watchdog
           EOF
-          ansible-playbook /tmp/ci-playbook.yml -i localhost, --connection=local \
-            --roles-path /tmp/asip-ci/ansible/roles \
+          ANSIBLE_ROLES_PATH=/tmp/asip-ci/ansible/roles \
+            ansible-playbook /tmp/ci-playbook.yml -i localhost, --connection=local \
             -e "ansible_python_interpreter=/usr/bin/python3" \
             --syntax-check
 
@@ -45,11 +45,11 @@ jobs:
         run: |
           cd /tmp/asip-ci/ansible
           # Dry run the watchdog play only (skip hardening import)
+          ANSIBLE_ROLES_PATH=/tmp/asip-ci/ansible/roles \
           ansible-playbook site.yml --check --diff \
             -i inventory/prod.yml \
             --limit mcp_watchdogs \
             --tags mcp-watchdog \
             --skip-tags hardening \
-            --roles-path /tmp/asip-ci/ansible/roles \
             --connection=local \
             -e "ansible_host=localhost ansible_connection=local" || true
