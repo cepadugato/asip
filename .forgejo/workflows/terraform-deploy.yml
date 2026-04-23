@@ -21,7 +21,7 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -qq -y pipx > /dev/null 2>&1
           pipx install terraform-local
-          pipx ensurepath
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
           # Also install terraform CLI for tflocal to work
           if ! command -v terraform >/dev/null 2>&1; then
             curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/terraform.zip
