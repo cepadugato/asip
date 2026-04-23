@@ -24,7 +24,7 @@ jobs:
       - name: Install Trivy
         run: |
           if ! command -v trivy >/dev/null 2>&1; then
-            curl -fsSL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz -o /tmp/trivy.tar.gz
+            curl -fsSL https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-64bit.tar.gz -o /tmp/trivy.tar.gz
             tar -xzf /tmp/trivy.tar.gz -C /tmp
             mv /tmp/trivy /usr/local/bin/trivy
             chmod +x /usr/local/bin/trivy
