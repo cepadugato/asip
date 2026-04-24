@@ -16,7 +16,7 @@ A.S.I.P. étend l'infrastructure Proxmox existante (19 VMs + 1 LXC + 2 routeurs 
 | **opnsense-router-2** | WAN + 10-50 | 203.0.113.2 | 2 | 2G | 16G | 98 | Firewall/routeur backup (CARP) |
 | **bastion** | 10 | 203.0.113.5 | 1 | 1G | 16G | 100 | SSH bastion + step-ca CA |
 | **monitoring-server** | 10 | 203.0.113.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki |
-| **mcp-watchdog** | — | 192.0.2.19 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04) |
+| **mcp-watchdog** | — | 192.0.2.19 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04, pas VM QEMU) |
 | **pg-node-1** | 10 | 203.0.113.30 | 2 | 4G | 64G | 102 | PostgreSQL Patroni nœud 1 |
 | **pg-node-2** | 10 | 203.0.113.31 | 2 | 4G | 64G | 103 | PostgreSQL Patroni nœud 2 |
 | **pg-node-3** | 10 | 203.0.113.32 | 2 | 4G | 64G | 104 | PostgreSQL Patroni nœud 3 |
@@ -181,7 +181,7 @@ Le stockage hybride est la brique "SIMULATE" d'A.S.I.P. Il simule un scénario d
 | `asip-cross-account` | Scénario cross-account | sts:AssumeRole sur `asip-cross-account-role` |
 | `asip-watchdog` | Agent IA surveillance | s3:FullAccess sur `asip-*`, lecture état infrastructure |
 
-**Note** : mcp-watchdog est un container LXC (VMID 119), pas une VM. Cela permet une empreinte plus légère et un accès direct au kernel de l'hôte pour les vérifications Goss.
+**Note** : mcp-watchdog est un **container LXC** (VMID 119), pas une VM QEMU. Terraform crée la VM via `proxmox_virtual_environment_vm` mais l'infrastructure réelle déploie un LXC via les scripts Ansible. Le LXC permet une empreinte plus légère et un accès direct au kernel de l'hôte pour les vérifications Goss. Le VMID 119 référence le container LXC sur le node Proxmox.
 
 ### rclone Remotes
 
