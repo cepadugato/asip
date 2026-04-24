@@ -153,7 +153,7 @@ jobs:
         run: |
           # Récupérer les résultats Goss depuis chaque VM
           mkdir -p goss-results
-          for host in 192.168.100.119 10.10.20.10 10.10.30.10; do
+          for host in 192.0.2.19 203.0.113.10 203.0.113.60; do
             scp -o StrictHostKeyChecking=no ansible@${host}:/var/log/goss/goss-results.json \
               goss-results/${host}.json 2>/dev/null || echo "{}" > goss-results/${host}.json
           done
@@ -331,7 +331,7 @@ feature/xxx  →  PR  →  Checks (security + drift)  →  Review  →  Merge �
 
 Le Forgejo Runner (v0.2.11) fonctionne sur le **PC hôte** en tant que **service systemd user**. Il utilise des **containers Docker** pour l'isolation des jobs CI/CD, ce qui résout les problèmes de Docker-in-LXC.
 
-> **Note** : Anciennement, le runner fonctionnait sur LXC 120 (192.168.100.120) en mode `host://self-hosted`. Le LXC 120 a été supprimé. Le runner utilise désormais des labels `docker://` pour exécuter chaque job dans un container Docker isolé.
+> **Note** : Anciennement, le runner fonctionnait sur LXC 120 (192.0.2.20) en mode `host://self-hosted`. Le LXC 120 a été supprimé. Le runner utilise désormais des labels `docker://` pour exécuter chaque job dans un container Docker isolé.
 
 ### Service systemd
 

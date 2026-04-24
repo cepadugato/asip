@@ -1,7 +1,7 @@
 variable "proxmox_endpoint" {
   description = "Proxmox VE API URL"
   type        = string
-  default     = "https://192.168.100.254:8006"
+  default     = "https://192.0.2.10:8006"
 }
 
 variable "proxmox_user" {
@@ -97,18 +97,18 @@ variable "network_config" {
     collab_vlan     = 30
     clients_vlan    = 40
     dmz_vlan         = 50
-    mgmt_subnet      = "10.10.10"
-    svc_subnet       = "10.10.20"
-    collab_subnet    = "10.10.30"
-    client_subnet    = "10.10.40"
-    dmz_subnet       = "10.10.50"
-    pg_subnet        = "10.10.10"
-    nameserver       = "10.10.20.10"
-    mgmt_gateway     = "10.10.10.1"
-    svc_gateway      = "10.10.20.1"
-    collab_gateway   = "10.10.30.1"
-    client_gateway   = "10.10.40.1"
-    dmz_gateway      = "10.10.50.1"
+    mgmt_subnet      = "203.0.113"
+    svc_subnet       = "203.0.113"
+    collab_subnet    = "203.0.113"
+    client_subnet    = "203.0.113"
+    dmz_subnet       = "203.0.113"
+    pg_subnet        = "203.0.113"
+    nameserver       = "203.0.113.10"
+    mgmt_gateway     = "203.0.113.1"
+    svc_gateway      = "203.0.113.1"
+    collab_gateway   = "203.0.113.1"
+    client_gateway   = "203.0.113.1"
+    dmz_gateway      = "203.0.113.1"
     wan_interface    = "vmbr0"
   }
 }

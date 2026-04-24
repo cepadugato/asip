@@ -56,7 +56,7 @@ resource "local_file" "cloud_init_network_watchdog" {
   content = templatefile(
     "${path.module}/../../infra-proxmox/cloud-init/network-config.tpl",
     {
-      ip         = "10.10.10.50"
+      ip         = "203.0.113.50"
       vlan       = 10
       gateway    = var.network_config.mgmt_gateway
       nameserver = var.network_config.nameserver
@@ -174,7 +174,7 @@ resource "proxmox_virtual_environment_firewall_security_group" "watchdog_service
     action  = "accept"
     proto   = "tcp"
     dport   = "8080"
-    source  = "10.10.0.0/16"
+    source  = "203.0.113.0/24"
     comment = "Watchdog webhook listener from internal"
   }
   rule {
@@ -182,7 +182,7 @@ resource "proxmox_virtual_environment_firewall_security_group" "watchdog_service
     action  = "accept"
     proto   = "tcp"
     dport   = "22"
-    source  = "10.10.20.0/24"
+    source  = "203.0.113.0/24"
     comment = "SSH from services VLAN (Ansible)"
   }
   rule {
@@ -190,7 +190,7 @@ resource "proxmox_virtual_environment_firewall_security_group" "watchdog_service
     action  = "accept"
     proto   = "tcp"
     dport   = "22"
-    dest    = "10.10.0.0/16"
+    dest    = "203.0.113.0/24"
     comment = "SSH to all VMs for Ansible remediation"
   }
   rule {
@@ -206,7 +206,7 @@ resource "proxmox_virtual_environment_firewall_security_group" "watchdog_service
     action  = "accept"
     proto   = "tcp"
     dport   = "3000"
-    source  = "10.10.10.0/24"
+    source  = "203.0.113.0/24"
     comment = "Forgejo API access"
   }
 }

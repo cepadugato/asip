@@ -17,7 +17,7 @@ Ce n'est pas une automatisation aveugle : l'agent évalue la sévérité, choisi
 │  ┌───────────────┐                    ┌──────────────────┐    │
 │  │  OpenCode     │  MCP Protocol      │  mcp-watchdog    │    │
 │  │  (Agent IA)   │ ◄────────────────► │  (LXC 119)       │    │
-│  │  GLM 5.1      │  (stdio JSON-RPC)  │  192.168.100.119 │    │
+│  │  GLM 5.1      │  (stdio JSON-RPC)  │  192.0.2.19 │    │
 │  │               │                    │  server.py :8080 │    │
 │  └───────────────┘                    └────────┬─────────┘    │
 │                                                 │              │
@@ -89,12 +89,12 @@ def poll_host(host_ip: str) -> DriftResult:
 Le webhook listener est un endpoint FastAPI qui reçoit les alertes push des VMs. Chaque VM configure son timer Goss pour POSTer vers le watchdog après chaque validation :
 
 ```
-POST http://192.168.100.119:8080/webhook/goss
+POST http://192.0.2.19:8080/webhook/goss
 Content-Type: application/json
 
 {
   "host": "bastion",
-  "ip": "192.168.100.5",
+  "ip": "192.0.2.5",
   "timestamp": "2026-04-21T14:30:00Z",
   "summary": {
     "total-count": 15,
@@ -307,7 +307,7 @@ Chaque action du watchdog est journalisée dans `/var/log/watchdog/` :
   "timestamp": "2026-04-21T14:30:15Z",
   "event": "drift_detected",
   "host": "bastion",
-  "ip": "192.168.100.5",
+  "ip": "192.0.2.5",
   "source": "webhook",
   "failed_checks": 2,
   "checks": ["file./etc/ssh/sshd_config", "service.crowdsec.running"]
