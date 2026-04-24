@@ -2,6 +2,7 @@ services:
   localstack:
     container_name: localstack-main
     image: localstack/localstack:3
+    restart: unless-stopped
     ports:
       - "4566:4566"
     environment:
@@ -9,6 +10,8 @@ services:
       - AWS_DEFAULT_REGION=eu-west-1
       - PERSISTENCE=1
       - DEBUG=0
+      - FORCE_NONINTERACTIVE=1
+      - GATEWAY_LISTEN=0.0.0.0:4566
     volumes:
       - ./volume:/var/lib/localstack
       - ./init:/etc/localstack/init/ready.d
