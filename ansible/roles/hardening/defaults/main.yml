@@ -1,0 +1,160 @@
+---
+# ASIP Hardening Role — ANSSI/CIS Level 1 Compliance for LXC Containers
+# Complements the infra-proxmox hardening role with missing controls
+
+# ============================================================================
+# PAM — Account Lockout (pam_faillock)
+# ============================================================================
+hardening_faillock_enabled: true
+hardening_faillock_deny: 5
+hardening_faillock_unlock_time: 900
+hardening_faillock_interval: 900
+hardening_faillock_even_deny_root: true
+hardening_faillock_root_unlock_time: 60
+
+# ============================================================================
+# PAM — Password History (pam_pwhistory)
+# ============================================================================
+hardening_pwhistory_enabled: true
+hardening_pwhistory_remember: 5
+
+# ============================================================================
+# SSH — Additional directives (complements infra-proxmox)
+# ============================================================================
+hardening_ssh_hostbased_authentication: "no"
+hardening_ssh_ignore_rhosts: "yes"
+hardening_ssh_permit_user_environment: "no"
+hardening_ssh_max_startups: "10:30:60"
+hardening_ssh_strict_modes: "yes"
+
+# ============================================================================
+# AIDE — File Integrity Monitoring
+# ============================================================================
+hardening_aide_enabled: true
+hardening_aide_cron_hour: "4"
+hardening_aide_cron_minute: "0"
+hardening_aide_db_path: "/var/lib/aide/aide.db"
+hardening_aide_db_new_path: "/var/lib/aide/aide.db.new"
+
+# ============================================================================
+# Auditd — Immutable flag
+# ============================================================================
+hardening_auditd_immutable: true
+
+# ============================================================================
+# SUID/SGID — Remove unnecessary binaries
+# ============================================================================
+hardening_suid_removal_enabled: true
+hardening_suid_blacklist:
+  - /usr/bin/chsh
+  - /usr/bin/chfn
+  - /usr/bin/newgrp
+  - /usr/bin/gpasswd
+  - /usr/bin/mount
+  - /usr/bin/umount
+  - /usr/bin/passwd
+  - /usr/bin/su
+  - /usr/bin/pkexec
+  - /usr/lib/openssh/ssh-keysign
+  - /usr/lib/dbus-1.0/dbus-daemon-launch-helper
+
+# ============================================================================
+# Sysctl — Container-applicable (namespaced)
+# ============================================================================
+hardening_container_sysctl:
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.default.secure_redirects: 0
+  net.ipv4.tcp_timestamps: 0
+  net.ipv4.icmp_echo_ignore_all: 0
+  net.ipv4.conf.all.bootp_relay: 0
+  net.ipv4.conf.default.bootp_relay: 0
+  net.ipv4.conf.all.proxy_arp: 0
+  net.ipv4.conf.default.proxy_arp: 0
+
+# ============================================================================
+# Sysctl — Host-only (PVE hypervisor, NOT for LXC containers)
+# Applied via tasks/host-pve.yml with --tags host-hardening
+# ============================================================================
+hardening_host_sysctl:
+  kernel.randomize_va_space: 2
+  kernel.dmesg_restrict: 1
+  kernel.kptr_restrict: 2
+  kernel.modules_disabled: 0
+  fs.protected_hardlinks: 1
+  fs.protected_symlinks: 1
+  fs.protected_fifos: 2
+  fs.protected_regular: 2
+  dev.tty.ldisc_autoload: 0
+
+# ============================================================================
+# Kernel modules blacklist (host-only, PVE)
+# ============================================================================
+hardening_blacklist_modules:
+  - usb-storage
+  - dccp
+  - sctp
+  - rds
+  - tipc
+
+# ============================================================================
+# Login banner
+# ============================================================================
+hardening_issue_banner: |
+  *******************************************************************
+  *  ACCES NON AUTORISE - UNAUTHORIZED ACCESS PROHIBITED             *
+  *                                                                   *
+  *  Ce systeme est la propriete de l'organisation.                   *
+  *  Tout acces non autorise est strictement interdit.                *
+  *  Les actions sont surveillees et enregistrees.                    *
+  *                                                                   *
+  *  This system is the property of the organization.                 *
+  *  Unauthorized access is strictly prohibited.                      *
+  *  All activities are monitored and recorded.                       *
+  *******************************************************************
+
+# ============================================================================
+# Journald configuration
+# ============================================================================
+hardening_journald_storage: "persistent"
+hardening_journald_system_max_use: "500M"
+hardening_journald_system_max_files: "10"
+hardening_journald_max_level_syslog: "info"
+
+# ============================================================================
+# World-writable files and directories
+# ============================================================================
+hardening_fix_world_writable: true
+hardening_sticky_bit_world_writable: true
+
+# ============================================================================
+# Password hashing algorithm
+# ============================================================================
+hardening_pam_hash_algorithm: "yescrypt"
+hardening_login_defs_encrypt_method: "SHA512"
+
+# ============================================================================
+# Additional packages to install
+# ============================================================================
+hardening_additional_packages:
+  - aide
+  - aide-common
+  - libpam-faillock
+  - libpam-pwquality
+  - rsyslog
+
+# ============================================================================
+# Additional packages to remove
+# ============================================================================
+hardening_additional_packages_remove: []
+
+# ============================================================================
+# Root account restrictions
+# ============================================================================
+hardening_root_default_shell: "/usr/sbin/nologin"
+hardening_ensure_no_duplicate_uid0: true
+
+# ============================================================================
+# Unattended upgrades (security only)
+# ============================================================================
+hardening_unattended_upgrades_enabled: true
+hardening_unattended_automatic_reboot: false

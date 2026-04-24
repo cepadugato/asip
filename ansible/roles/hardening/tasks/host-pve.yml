@@ -1,0 +1,82 @@
+---
+# ASIP Hardening — Proxmox VE Host-Only Tasks
+# These sysctl parameters and kernel settings CANNOT be set inside LXC containers
+# (they are not namespaced). They must be applied on the PVE hypervisor host.
+#
+# Run with: ansible-playbook site.yml --tags host-hardening --limit pve
+
+- name: "HOST-ONLY: Validate we are on a bare-metal host"
+  ansible.builtin.assert:
+    that:
+      - ansible_virtualization_type in ["host", "kvm", ""] or ansible_virtualization_role == "host"
+    fail_msg: "These tasks must run on the Proxmox VE host, not inside a container or VM."
+    quiet: true
+
+# ============================================================================
+# SYCTL — KERNEL HARDENING (host-only, not namespaced for LXC)
+# ANSSI GCR §2.2, CIS 3.1
+# ============================================================================
+- name: "HOST-ONLY: Configure kernel hardening sysctl"
+  ansible.builtin.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value | string }}"
+    sysctl_set: true
+    state: present
+    reload: true
+    sysctl_file: /etc/sysctl.d/99-hardening-pve.conf
+  loop: "{{ hardening_host_sysctl | dict2items }}"
+
+# ============================================================================
+# KERNEL MODULE BLACKLIST (host-only, containers can't load modules)
+# CIS 3.5 — Disable uncommon network protocols
+# ============================================================================
+- name: "HOST-ONLY: Blacklist uncommon network and USB modules"
+  ansible.builtin.copy:
+    content: |
+      # CIS 3.5 — Disable uncommon network protocols
+      {% for module in hardening_blacklist_modules %}
+      install {{ module }} /bin/true
+      blacklist {{ module }}
+      {% endfor %}
+    dest: /etc/modprobe.d/hardening-blacklist.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+# ============================================================================
+# BOOT PARAMETERS (host-only)
+# ANSSI GCR §2.3 — Kernel boot options
+# ============================================================================
+- name: "HOST-ONLY: Configure GRUB boot parameters"
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash slab_nomerge slub_debug=FZP mce=0 vdso=0 page_poison=1 net.ifnames=0"'
+    backup: true
+  register: grub_config_changed
+
+- name: "HOST-ONLY: Update GRUB"
+  ansible.builtin.command: update-grub
+  when: grub_config_changed.changed
+
+# ============================================================================
+# COREDUMP CONFIGURATION (host-only)
+# ============================================================================
+- name: "HOST-ONLY: Configure core dump limits"
+  ansible.builtin.copy:
+    content: |
+      # Limit core dumps to root only
+      * hard core 0
+      root hard core unlimited
+    dest: /etc/security/limits.d/core-limits.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "HOST-ONLY: Set kernel core pattern"
+  ansible.builtin.sysctl:
+    name: kernel.core_pattern
+    value: "|/bin/false"
+    sysctl_set: true
+    state: present
+    sysctl_file: /etc/sysctl.d/99-hardening-pve.conf
