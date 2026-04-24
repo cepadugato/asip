@@ -99,7 +99,7 @@ deploy_asip_infra() {
 start_watchdog() {
     log "=== Step 4: Starting mcp-watchdog VM ==="
     VM_ID=119
-    PROXMOX_HOST="${PROXMOX_HOST:-REDACTED_PROXMOX_HOST}"
+    PROXMOX_HOST="${PROXMOX_HOST:-192.168.100.254}"
     PROXMOX_NODE="${PROXMOX_NODE:-pve}"
 
     if command -v qm &>/dev/null; then
