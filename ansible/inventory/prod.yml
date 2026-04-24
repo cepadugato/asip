@@ -2,45 +2,45 @@
 all:
   hosts:
     ad-server:
-      ansible_host: 10.10.20.10
+      ansible_host: 203.0.113.110
     ad-server-2:
-      ansible_host: 10.10.20.13
+      ansible_host: 203.0.113.113
     dhcp-server:
-      ansible_host: 10.10.20.11
+      ansible_host: 203.0.113.111
     dhcp-server-2:
-      ansible_host: 10.10.20.14
+      ansible_host: 203.0.113.114
     vault-server:
-      ansible_host: 10.10.20.12
+      ansible_host: 203.0.113.112
     collab-server:
-      ansible_host: 10.10.20.10
+      ansible_host: 203.0.113.110
     mail-server:
-      ansible_host: 10.10.20.11
+      ansible_host: 203.0.113.111
     keycloak-server:
-      ansible_host: 10.10.10.20
+      ansible_host: 203.0.113.20
     keycloak-server-2:
-      ansible_host: 10.10.20.23
+      ansible_host: 203.0.113.123
     step-ca-server:
-      ansible_host: 10.10.20.21
+      ansible_host: 203.0.113.121
     test-client:
-      ansible_host: 10.10.20.100
+      ansible_host: 203.0.113.1100
     monitoring-server:
-      ansible_host: 10.10.10.20
+      ansible_host: 203.0.113.20
     dmz-proxy:
-      ansible_host: 10.10.20.10
+      ansible_host: 203.0.113.110
     bastion:
-      ansible_host: 10.10.10.5
+      ansible_host: 203.0.113.5
     pg-node-1:
-      ansible_host: 10.10.10.30
+      ansible_host: 203.0.113.30
     pg-node-2:
-      ansible_host: 10.10.10.31
+      ansible_host: 203.0.113.31
     pg-node-3:
-      ansible_host: 10.10.10.32
+      ansible_host: 203.0.113.32
     haproxy-1:
-      ansible_host: 10.10.10.20
+      ansible_host: 203.0.113.20
     haproxy-2:
-      ansible_host: 10.10.20.21
+      ansible_host: 203.0.113.121
     mcp-watchdog:
-      ansible_host: 10.10.10.50
+      ansible_host: 203.0.113.50
   children:
     ad_servers:
       hosts:
@@ -81,14 +81,14 @@ all:
     routers:
       hosts:
         opnsense-router:
-          ansible_host: 10.10.20.1
+          ansible_host: 203.0.113.101
           ansible_user: root
           ansible_connection: local
           ansible_python_interpreter: /usr/bin/python3
     routers_2:
       hosts:
         opnsense-router-2:
-          ansible_host: 10.10.20.2
+          ansible_host: 203.0.113.102
           ansible_connection: local
           role: router-2
     test_clients:
