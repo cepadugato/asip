@@ -145,7 +145,7 @@
     rule: allow
     port: "{{ mcp_watchdog_webhook_port }}"
     proto: tcp
-    src: "203.0.113.0/24"
+    src: "10.10.0.0/16"
   notify: Reload UFW
 
 - name: Wait for watchdog service to be ready

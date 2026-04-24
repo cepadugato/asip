@@ -7,8 +7,8 @@
 SSH_USER="${SSH_USER:-ansible}"
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_ed25519}"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
-BASTION_IP="203.0.113.5"
-WATCHDOG_IP="203.0.113.50"
+BASTION_IP="10.10.10.5"
+WATCHDOG_IP="10.10.10.50"
 DRIFT_FILE="/etc/ssh/sshd_config"
 
 log()  { echo "[$(date '+%H:%M:%S')] $*"; }

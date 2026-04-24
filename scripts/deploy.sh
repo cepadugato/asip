@@ -99,7 +99,7 @@ deploy_asip_infra() {
 start_watchdog() {
     log "=== Step 4: Starting mcp-watchdog VM ==="
     VM_ID=119
-    PROXMOX_HOST="${PROXMOX_HOST:-192.0.2.10}"
+    PROXMOX_HOST="${PROXMOX_HOST:-192.168.100.254}"
     PROXMOX_NODE="${PROXMOX_NODE:-pve}"
 
     if command -v qm &>/dev/null; then
@@ -110,10 +110,10 @@ start_watchdog() {
             2>/dev/null || warn "Could not start watchdog VM via API"
     fi
 
-    log "Waiting for SSH on watchdog (203.0.113.50)..."
+    log "Waiting for SSH on watchdog (10.10.10.50)..."
     retries=0
     while [ ${retries} -lt 60 ]; do
-        if ssh ${SSH_OPTS} -i "${SSH_KEY}" "${SSH_USER}@203.0.113.50" "echo OK" &>/dev/null; then
+        if ssh ${SSH_OPTS} -i "${SSH_KEY}" "${SSH_USER}@10.10.10.50" "echo OK" &>/dev/null; then
             log "SSH ready on watchdog (after ${retries} attempts)"
             break
         fi
@@ -161,17 +161,17 @@ print_summary() {
     echo "========================================================================="
     echo ""
     echo "  ASIP Endpoints:"
-    echo "    MCP Watchdog:        http://203.0.113.50:8080/status"
-    echo "    Webhook URL:          http://203.0.113.50:8080/webhook/goss"
+    echo "    MCP Watchdog:        http://10.10.10.50:8080/status"
+    echo "    Webhook URL:          http://10.10.10.50:8080/webhook/goss"
     echo "    Forgejo:             http://localhost:3000"
     echo "    LocalStack S3:        http://localhost:4566"
     echo ""
     echo "  Existing Infrastructure (from infra-proxmox):"
-    echo "    OPNsense:             https://203.0.113.1"
-    echo "    Grafana:              http://203.0.113.20:3000"
-    echo "    Keycloak:             https://203.0.113.20:8443"
-    echo "    Nextcloud:            https://203.0.113.10"
-    echo "    Vaultwarden:          https://203.0.113.12"
+    echo "    OPNsense:             https://10.10.20.1"
+    echo "    Grafana:              http://10.10.10.20:3000"
+    echo "    Keycloak:             https://10.10.10.20:8443"
+    echo "    Nextcloud:            https://10.10.20.10"
+    echo "    Vaultwarden:          https://10.10.20.12"
     echo ""
     echo "  To test autonomous ops:"
     echo "    ./scripts/demo-autonomous.sh"
