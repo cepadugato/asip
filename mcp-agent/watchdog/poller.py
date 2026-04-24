@@ -1,8 +1,11 @@
-import subprocess
 import json
 import logging
-import yaml
+import os
+import subprocess
 from typing import Optional
+
+import yaml
+
 from watchdog.state import StateEngine
 
 logger = logging.getLogger("asip.watchdog.poller")
@@ -60,6 +63,3 @@ class Poller:
         except Exception as e:
             logger.error(f"Error polling {host}: {e}")
             return {"host": host, "ip": ip, "status": "error", "failed": 0}
-
-
-import os
