@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         run: |
           rm -rf /tmp/asip-ci
-          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@${{ vars.FORGEJO_HOST }}:3000/git/asip.git /tmp/asip-ci
 
       - name: Install tflocal and Terraform
         run: |
@@ -34,14 +34,14 @@ jobs:
         run: |
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
-            AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
+            AWS_ENDPOINT_URL=http://${{ vars.FORGEJO_HOST }}:4566 \
             tflocal init -input=false
 
       - name: Terraform Plan LocalStack
         run: |
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
-            AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
+            AWS_ENDPOINT_URL=http://${{ vars.FORGEJO_HOST }}:4566 \
             tflocal plan -out=tfplan
 
       - name: Terraform Apply LocalStack
@@ -49,7 +49,7 @@ jobs:
         run: |
           cd /tmp/asip-ci/localstack/terraform
           AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=eu-west-1 \
-            AWS_ENDPOINT_URL=http://192.168.100.1:4566 \
+            AWS_ENDPOINT_URL=http://${{ vars.FORGEJO_HOST }}:4566 \
             tflocal apply -auto-approve tfplan || echo "WARN: Apply failed (resources may already exist in persistent LocalStack)"
 
   terraform-proxmox-plan:
@@ -58,7 +58,7 @@ jobs:
       - name: Checkout
         run: |
           rm -rf /tmp/asip-ci
-          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@${{ vars.FORGEJO_HOST }}:3000/git/asip.git /tmp/asip-ci
 
       - name: Setup Terraform
         run: |
