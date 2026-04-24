@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         run: |
           rm -rf /tmp/asip-ci
-          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@REDACTED_GATEWAY_IP:3000/git/asip.git /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
 
       - name: Install Ansible
         run: |
@@ -35,6 +35,7 @@ jobs:
             become: true
             roles:
               - role: mcp-watchdog
+              - role: hardening
           EOF
           ANSIBLE_ROLES_PATH=/tmp/asip-ci/ansible/roles \
             ansible-playbook /tmp/ci-playbook.yml -i localhost, --connection=local \
