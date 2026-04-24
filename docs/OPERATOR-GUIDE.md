@@ -12,7 +12,7 @@ Le projet repose sur quatre piliers : le deploiement automatise (Terraform, Ansi
 
 | Composant | Technologie | IP / Endpoint |
 |-----------|-------------|---------------|
-| Hyperviseur | Proxmox VE 8.2 | 192.168.100.254 |
+| Hyperviseur | Proxmox VE 8.2 | 192.0.2.254 |
 | Routeur / Firewall | OPNsense (HA CARP) | 203.0.113.1 / .2 (VIP .254) |
 | Bastion | Ubuntu Server | 203.0.113.5 |
 | Supervision | Grafana + Prometheus + Loki | 203.0.113.20:3000 |
@@ -139,10 +139,10 @@ pm stop 119    # MCP Watchdog
 pm status 119  # Voir etat
 
 # Via API Proxmox (depuis le PC hote)
-curl -sk -X POST "https://192.168.100.254:8006/api2/json/nodes/pve/qemu/119/status/start" \
+curl -sk -X POST "https://192.0.2.254:8006/api2/json/nodes/pve/qemu/119/status/start" \
   -H "Authorization: PVEAPIToken root@pam!terraform=<token>"
 
-curl -sk -X POST "https://192.168.100.254:8006/api2/json/nodes/pve/qemu/119/status/stop" \
+curl -sk -X POST "https://192.0.2.254:8006/api2/json/nodes/pve/qemu/119/status/stop" \
   -H "Authorization: PVEAPIToken root@pam!terraform=<token>"
 ```
 

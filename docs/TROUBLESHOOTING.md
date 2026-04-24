@@ -286,7 +286,7 @@ Le fichier `~/.vault_pass` n'existe pas, est vide, ou ne contient pas le bon mot
 
 **Symptome**
 ```bash
-curl -k "https://192.168.100.254:8006/api2/json/nodes"
+curl -k "https://192.0.2.254:8006/api2/json/nodes"
 ```
 Retourne `401 No ticket` ou `401 Unauthorized`.
 Terraform retourne `401 Unauthorized: user name or password verification failed`.
@@ -294,7 +294,7 @@ Terraform retourne `401 Unauthorized: user name or password verification failed`
 **Diagnostic**
 1. Tester avec les credentials corrects :
    ```bash
-   curl -k "https://192.168.100.254:8006/api2/json/nodes" \
+   curl -k "https://192.0.2.254:8006/api2/json/nodes" \
      -H "Authorization: PVEAPIToken root@pam!terraform=<TOKEN>"
    ```
 2. Verifier les variables d'environnement ou le provider Terraform :
@@ -597,7 +597,7 @@ Aucun log n'est genere pour le job.
    ```
 3. Verifier les labels du runner :
    ```bash
-   cat /mnt/6D33430F1C940A7B/Documents/opencode/.runner-home/config.yaml | grep labels
+   cat /opt/asip/.runner-home/config.yaml | grep labels
    ```
 
 **Cause**

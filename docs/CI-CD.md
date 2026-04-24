@@ -308,14 +308,14 @@ Le Forgejo Runner (v0.2.11) fonctionne sur le **PC hôte** en tant que **service
 Le runner est géré par un service systemd user :
 
 ```ini
-# /home/fred/.config/systemd/user/forgejo-runner.service
+# /home/admin/.config/systemd/user/forgejo-runner.service
 [Unit]
 Description=Forgejo Runner — CI/CD for A.S.I.P.
 After=docker.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/forgejo-runner daemon --config /mnt/6D33430F1C940A7B/Documents/opencode/.runner-home/config.yaml
+ExecStart=/usr/local/bin/forgejo-runner daemon --config /opt/asip/.runner-home/config.yaml
 Restart=always
 RestartSec=10
 
@@ -342,7 +342,7 @@ systemctl --user stop forgejo-runner.service
 ### Configuration
 
 ```yaml
-# /mnt/6D33430F1C940A7B/Documents/opencode/.runner-home/config.yaml
+# /opt/asip/.runner-home/config.yaml
 runner:
   name: infra-runner
   labels:

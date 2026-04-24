@@ -51,8 +51,8 @@ Le Forgejo Runner s'exécute désormais sur le PC hôte en tant que service syst
 | Propriété | Valeur |
 |-----------|--------|
 | Service | `forgejo-runner.service` (systemd user) |
-| Configuration | `/mnt/6D33430F1C940A7B/Documents/opencode/.runner-home/config.yaml` |
-| Unit file | `/home/fred/.config/systemd/user/forgejo-runner.service` |
+| Configuration | `/opt/asip/.runner-home/config.yaml` |
+| Unit file | `/home/admin/.config/systemd/user/forgejo-runner.service` |
 | Gestion | `systemctl --user start/stop/status forgejo-runner.service` |
 | Mode d'exécution | Docker containers (`docker://node:22-bookworm`) |
 | Labels | `ubuntu-latest:docker://node:22-bookworm`, `ansible:docker://node:22-bookworm` |

@@ -142,7 +142,7 @@ echo ""
 # rclone + LocalStack sync
 # -------------------------------------------------------------------------------------------------
 echo "--- Hybrid Storage (rclone + LocalStack) ---"
-RCLONE="${RCLONE_LOCAL:-/mnt/6D33430F1C940A7B/Documents/opencode/.local/bin/rclone}"
+RCLONE="${RCLONE_LOCAL:-/opt/asip/.local/bin/rclone}"
 
 if [ -x "${RCLONE}" ]; then
     ok "rclone available: $(${RCLONE} version | head -1)"
