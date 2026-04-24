@@ -12,28 +12,28 @@ A.S.I.P. étend l'infrastructure Proxmox existante (19 VMs + 1 LXC + 2 routeurs 
 
 | VM | VLAN | IP | CPU | RAM | Disk | VMID | Rôle |
 |----|------|----|-----|-----|------|------|------|
-| **opnsense-router** | WAN + 10-50 | 10.10.20.1 | 2 | 2G | 16G | 99 | Firewall/routeur primaire (CARP) |
-| **opnsense-router-2** | WAN + 10-50 | 10.10.20.2 | 2 | 2G | 16G | 98 | Firewall/routeur backup (CARP) |
-| **bastion** | 10 | 10.10.10.5 | 1 | 1G | 16G | 100 | SSH bastion + step-ca CA |
-| **monitoring-server** | 10 | 10.10.10.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki |
-| **mcp-watchdog** | — | 192.168.100.119 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04) |
-| **pg-node-1** | 10 | 10.10.10.30 | 2 | 4G | 64G | 102 | PostgreSQL Patroni nœud 1 |
-| **pg-node-2** | 10 | 10.10.10.31 | 2 | 4G | 64G | 103 | PostgreSQL Patroni nœud 2 |
-| **pg-node-3** | 10 | 10.10.10.32 | 2 | 4G | 64G | 104 | PostgreSQL Patroni nœud 3 |
-| **ad-server** | 20 | 10.10.20.10 | 4 | 4G | 64G | 105 | Samba4 AD DC primaire |
-| **ad-server-2** | 20 | 10.10.20.13 | 4 | 4G | 64G | 106 | Samba4 AD DC secondaire (réplication) |
-| **dhcp-server** | 20 | 10.10.20.11 | 2 | 2G | 32G | 107 | Kea DHCP + DNS forwarder |
-| **dhcp-server-2** | 20 | 10.10.20.14 | 2 | 2G | 32G | 108 | Kea DHCP HA pair |
-| **vault-server** | 20 | 10.10.20.12 | 2 | 2G | 32G | 109 | Vaultwarden gestionnaire de mots de passe |
-| **keycloak-server** | 20 | 10.10.20.20 | 2 | 2G | 32G | 110 | Keycloak SSO IdP primaire |
-| **keycloak-server-2** | 20 | 10.10.20.23 | 2 | 2G | 32G | 111 | Keycloak SSO IdP secondaire |
-| **step-ca-server** | 20 | 10.10.20.21 | 1 | 512M | 16G | 112 | Smallstep step-ca PKI interne |
-| **collab-server** | 30 | 10.10.30.10 | 4 | 8G | 128G | 113 | Nextcloud + OnlyOffice |
-| **mail-server** | 30 | 10.10.30.11 | 2 | 2G | 64G | 114 | Postfix + Dovecot |
-| **test-client** | 40 | 10.10.40.100 | 2 | 4G | 64G | 115 | Ubuntu Desktop — validation SSO/Kerberos |
-| **dmz-proxy** | 50 | 10.10.50.10 | 2 | 2G | 32G | 116 | nginx reverse proxy + ModSecurity WAF |
-| **haproxy-1** | 50 | 10.10.50.20 | 1 | 1G | 16G | 117 | HAProxy LB primaire (VRRP) |
-| **haproxy-2** | 50 | 10.10.50.21 | 1 | 1G | 16G | 118 | HAProxy LB backup (VRRP) |
+| **opnsense-router** | WAN + 10-50 | 203.0.113.1 | 2 | 2G | 16G | 99 | Firewall/routeur primaire (CARP) |
+| **opnsense-router-2** | WAN + 10-50 | 203.0.113.2 | 2 | 2G | 16G | 98 | Firewall/routeur backup (CARP) |
+| **bastion** | 10 | 203.0.113.5 | 1 | 1G | 16G | 100 | SSH bastion + step-ca CA |
+| **monitoring-server** | 10 | 203.0.113.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki |
+| **mcp-watchdog** | — | 192.0.2.19 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04) |
+| **pg-node-1** | 10 | 203.0.113.30 | 2 | 4G | 64G | 102 | PostgreSQL Patroni nœud 1 |
+| **pg-node-2** | 10 | 203.0.113.31 | 2 | 4G | 64G | 103 | PostgreSQL Patroni nœud 2 |
+| **pg-node-3** | 10 | 203.0.113.32 | 2 | 4G | 64G | 104 | PostgreSQL Patroni nœud 3 |
+| **ad-server** | 20 | 203.0.113.10 | 4 | 4G | 64G | 105 | Samba4 AD DC primaire |
+| **ad-server-2** | 20 | 203.0.113.13 | 4 | 4G | 64G | 106 | Samba4 AD DC secondaire (réplication) |
+| **dhcp-server** | 20 | 203.0.113.11 | 2 | 2G | 32G | 107 | Kea DHCP + DNS forwarder |
+| **dhcp-server-2** | 20 | 203.0.113.14 | 2 | 2G | 32G | 108 | Kea DHCP HA pair |
+| **vault-server** | 20 | 203.0.113.12 | 2 | 2G | 32G | 109 | Vaultwarden gestionnaire de mots de passe |
+| **keycloak-server** | 20 | 203.0.113.20 | 2 | 2G | 32G | 110 | Keycloak SSO IdP primaire |
+| **keycloak-server-2** | 20 | 203.0.113.23 | 2 | 2G | 32G | 111 | Keycloak SSO IdP secondaire |
+| **step-ca-server** | 20 | 203.0.113.21 | 1 | 512M | 16G | 112 | Smallstep step-ca PKI interne |
+| **collab-server** | 30 | 203.0.113.60 | 4 | 8G | 128G | 113 | Nextcloud + OnlyOffice |
+| **mail-server** | 30 | 203.0.113.61 | 2 | 2G | 64G | 114 | Postfix + Dovecot |
+| **test-client** | 40 | 203.0.113.100 | 2 | 4G | 64G | 115 | Ubuntu Desktop — validation SSO/Kerberos |
+| **dmz-proxy** | 50 | 203.0.113.70 | 2 | 2G | 32G | 116 | nginx reverse proxy + ModSecurity WAF |
+| **haproxy-1** | 50 | 203.0.113.80 | 1 | 1G | 16G | 117 | HAProxy LB primaire (VRRP) |
+| **haproxy-2** | 50 | 203.0.113.81 | 1 | 1G | 16G | 118 | HAProxy LB backup (VRRP) |
 
 ### Services sur le PC hôte
 
@@ -70,7 +70,7 @@ Le Forgejo Runner s'exécute désormais sur le PC hôte en tant que service syst
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────┐ │
 │  │  VLAN 10    │  │  VLAN 20    │  │  VLAN 30    │  │ VLAN 50  │ │
 │  │  MANAGEMENT │  │  SERVICES   │  │  COLLAB     │  │   DMZ    │ │
-│  │ 10.10.10/24 │  │ 10.10.20/24 │  │ 10.10.30/24 │  │10.10.50  │ │
+│  │ 203.0.113.0/28 │  │ 203.0.113.16/28 │  │ 203.0.113.32/28 │  │203.0.113.64/28  │ │
 │  │             │  │             │  │             │  │  /24     │ │
 │  │ bastion     │  │ AD DC 1+2   │  │ Nextcloud   │  │ nginx    │ │
 │  │ monitoring  │  │ DHCP 1+2    │  │ OnlyOffice  │  │ WAF      │ │
@@ -81,7 +81,7 @@ Le Forgejo Runner s'exécute désormais sur le PC hôte en tant que service syst
 │         │                │                │               │        │
 │  ┌──────┴────────────────┴────────────────┴───────────────┴──┐    │
 │  │              OPNsense Router (Inter-VLAN routing)         │    │
-│  │     Primary: 10.10.20.1 / Backup: 10.10.20.2 / VIP: .254 │    │
+│  │     Primary: 203.0.113.1 / Backup: 203.0.113.2 / VIP: .254 │    │
 │  └───────────────────────────────────────────────────────────┘    │
 │                             │                                      │
 │                       vmbr0 (WAN)                                 │
@@ -98,7 +98,7 @@ Le Forgejo Runner s'exécute désormais sur le PC hôte en tant que service syst
   ┌─────────────┐
   │  VLAN 40    │  (isolation complète, pas de route vers MGMT)
   │  CLIENTS    │
-  │ 10.10.40/24 │
+  │ 203.0.113.48/28 │
   │ test-client │
   └─────────────┘
 ```
@@ -127,10 +127,10 @@ Le Forgejo Runner s'exécute désormais sur le PC hôte en tant que service syst
 
 | Service | Mécanisme HA | VIP / Failover |
 |---------|-------------|----------------|
-| Firewall/Routing | OPNsense CARP | 10.10.{10,20,30,40,50}.254 |
+| Firewall/Routing | OPNsense CARP | 203.0.113.x.254 |
 | AD Directory | Samba4 réplication multi-DC | ad-server + ad-server-2 |
 | DHCP | Kea HA active-active | dhcp-server + dhcp-server-2 |
-| PostgreSQL | Patroni (3 nœuds, automatic failover) | 10.10.10.30-32 |
+| PostgreSQL | Patroni (3 nœuds, automatic failover) | 203.0.113.30-32 |
 | SSO | Keycloak HA pair | keycloak-server + keycloak-server-2 |
 | Load Balancing | HAProxy + VRRP (Keepalived) | haproxy-1 (primary) + haproxy-2 (backup) |
 
@@ -145,13 +145,13 @@ Le stockage hybride est la brique "SIMULATE" d'A.S.I.P. Il simule un scénario d
 │   INFRA ON-PREM       │          │   LOCALSTACK (Mock)  │
 │                       │          │                      │
 │  vault-server         │  rclone  │  asip-backup (S3)    │
-│  10.10.20.12          │ ──────── │  Versioning+Lifecycle│
+│  203.0.113.12          │ ──────── │  Versioning+Lifecycle│
 │                       │  sync    │                      │
 │  collab-server        │ ──────── │  asip-documents (S3)  │
-│  10.10.30.10          │  sync    │  Versioning+Lifecycle│
+│  203.0.113.60          │  sync    │  Versioning+Lifecycle│
 │                       │          │                      │
 │  mcp-watchdog         │ ──────── │  IAM users/policies  │
-│  192.168.100.119      │  boto3   │  (asip-backup-agent) │
+│  192.0.2.19      │  boto3   │  (asip-backup-agent) │
 │  (LXC)                │          │                      │
 │                       │          │  asip-terraform-state│
 │                       │          │  (S3, AES256)         │
@@ -242,6 +242,6 @@ L'ordre de déploiement respecte les dépendances entre composants :
 | HTTPS | TCP:443 | Clients → DMZ | Proxy/LB | Accès services |
 | LDAPS | TCP:636 | Services → AD | ad-server | Auth LDAP |
 | Kerberos | TCP/UDP:88 | Toutes VMs → AD | ad-server | Auth SSO |
-| Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog (192.168.100.119) | Alertes drift |
+| Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog (192.0.2.19) | Alertes drift |
 | S3 API | TCP:4566 | VMs → LocalStack | localhost | Stockage hybride |
 | Forgejo API | TCP:3000 | Runner → Forgejo | PC hôte (localhost) | CI/CD |

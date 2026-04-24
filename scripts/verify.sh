@@ -53,9 +53,9 @@ echo ""
 # Proxmox
 # -------------------------------------------------------------------------------------------------
 echo "--- Proxmox ---"
-PROXMOX_HOST="${PROXMOX_HOST:-192.168.100.254}"
+PROXMOX_HOST="${PROXMOX_HOST:-192.0.2.10}"
 PROXMOX_NODE="${PROXMOX_NODE:-pve}"
-PROXMOX_TOKEN="${PROXMOX_TOKEN:-2f77eb04-12ba-4594-b685-e09ca5fa28b3}"
+PROXMOX_TOKEN="${PROXMOX_TOKEN:-<REDACTED_PROXMOX_TOKEN>}"
 
 PVE_STATUS=$(curl -sk "https://${PROXMOX_HOST}:8006/api2/json/nodes/${PROXMOX_NODE}/status" \
   -H "Authorization: PVEAPIToken root@pam!terraform=${PROXMOX_TOKEN}" 2>/dev/null || echo "")
@@ -71,7 +71,7 @@ echo ""
 # MCP Watchdog (LXC 119)
 # -------------------------------------------------------------------------------------------------
 echo "--- MCP Watchdog ---"
-WATCHDOG_IP="${WATCHDOG_IP:-192.168.100.119}"
+WATCHDOG_IP="${WATCHDOG_IP:-192.0.2.19}"
 
 if curl -sf "http://${WATCHDOG_IP}:8080/health" 2>/dev/null | grep -q '"ok"'; then
     ok "Watchdog API responding on ${WATCHDOG_IP}:8080"
@@ -108,7 +108,7 @@ echo ""
 # Forgejo
 # -------------------------------------------------------------------------------------------------
 echo "--- Forgejo ---"
-FORGEJO_TOKEN="${FORGEJO_TOKEN:-774b2317f4cef0c7e5918ba48b6553b44f8c66c2}"
+FORGEJO_TOKEN="${FORGEJO_TOKEN:-<REDACTED_FORGEJO_TOKEN>}"
 
 if curl -sf "http://localhost:3000/api/v1/repos/git/asip" \
   -H "Authorization: token ${FORGEJO_TOKEN}" 2>/dev/null | grep -q "asip"; then

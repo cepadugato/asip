@@ -39,19 +39,19 @@ Deux couches de filtering sont appliquées simultanément :
 
 | Security Group | Règles entrantes | Source |
 |---------------|-----------------|--------|
-| `ad-services` | TCP:53,88,135,139,389,445,464,636,3268,3269 + UDP:53,88,123,137,138,389,464 | 10.10.0.0/16 |
-| `dhcp-service` | UDP:67,68 from 10.10.40.0/24, TCP+UDP:53 from 10.10.0.0/16 | Clients + internal |
-| `vaultwarden-service` | TCP:443,80 from 10.10.0.0/16 | All internal |
-| `collab-service` | TCP:443,444 from 10.10.40.0/24, TCP:587,993 from 10.10.40.0/24 | Clients |
-| `keycloak-service` | TCP:8443 from 10.10.0.0/16 | All internal |
-| `step-ca-service` | TCP:443 from 10.10.0.0/16 | All internal |
-| `mgmt-access` | TCP:22 from 10.10.20.0/24, TCP:8006 from 10.10.10.0/24 | Ansible + Proxmox UI |
-| `monitoring-service` | TCP:9090,3000,3100 from 10.10.0.0/16 | All internal |
-| `bastion-service` | TCP:22 from 10.10.0.0/16 + out TCP:22 to 10.10.0.0/16 | SSH gateway |
-| `dmz-proxy-service` | TCP:443,80,8443,444 from 10.10.0.0/16 | Reverse proxy |
-| `haproxy-lb` | TCP:443,80 from 10.10.0.0/16 | Load balancing |
-| `postgresql-service` | TCP:5432 from 10.10.10+20.0/0, TCP:8008,8009 from 10.10.10.0/24 | DB + Patroni |
-| `watchdog-service` | TCP:8080 from 10.10.0.0/16, TCP:22 from 10.10.20.0/24 | Webhook + SSH |
+| `ad-services` | TCP:53,88,135,139,389,445,464,636,3268,3269 + UDP:53,88,123,137,138,389,464 | 203.0.113.0/24 |
+| `dhcp-service` | UDP:67,68 from 203.0.113.0/24, TCP+UDP:53 from 203.0.113.0/24 | Clients + internal |
+| `vaultwarden-service` | TCP:443,80 from 203.0.113.0/24 | All internal |
+| `collab-service` | TCP:443,444 from 203.0.113.0/24, TCP:587,993 from 203.0.113.0/24 | Clients |
+| `keycloak-service` | TCP:8443 from 203.0.113.0/24 | All internal |
+| `step-ca-service` | TCP:443 from 203.0.113.0/24 | All internal |
+| `mgmt-access` | TCP:22 from 203.0.113.0/24, TCP:8006 from 203.0.113.0/24 | Ansible + Proxmox UI |
+| `monitoring-service` | TCP:9090,3000,3100 from 203.0.113.0/24 | All internal |
+| `bastion-service` | TCP:22 from 203.0.113.0/24 + out TCP:22 to 203.0.113.0/24 | SSH gateway |
+| `dmz-proxy-service` | TCP:443,80,8443,444 from 203.0.113.0/24 | Reverse proxy |
+| `haproxy-lb` | TCP:443,80 from 203.0.113.0/24 | Load balancing |
+| `postgresql-service` | TCP:5432 from 203.0.113.0/24, TCP:8008,8009 from 203.0.113.0/24 | DB + Patroni |
+| `watchdog-service` | TCP:8080 from 203.0.113.0/24, TCP:22 from 203.0.113.0/24 | Webhook + SSH |
 
 ### Politiques de trafic prohibé
 
@@ -178,7 +178,7 @@ Installé sur toutes les VMs, CrowdSec fournit une détection collaborative :
 ```
 ┌──────────────────────────────────┐
 │  Smallstep step-ca               │
-│  10.10.20.21                     │
+│  203.0.113.21                     │
 │  Root CA: offline (air-gapped)   │
 │  Intermediate: step-ca online    │
 │  ACME: auto-enrollment           │
@@ -266,7 +266,7 @@ Le rôle `goss-poll` déploie sur chaque VM :
 - Un fichier `/etc/goss/goss.yaml` décrivant l'état attendu
 - Un timer systemd `goss-poll.timer` (toutes les 5 minutes)
 - Un service `goss-poll.service` qui exécute la validation
-- Un webhook vers `http://192.168.100.119:8080/webhook/goss` en cas de drift
+- Un webhook vers `http://192.0.2.19:8080/webhook/goss` en cas de drift
 
 **Exemple de vérifications Goss :**
 

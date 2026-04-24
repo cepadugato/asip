@@ -1,1 +1,32 @@
+# LocalStack runtime data
 localstack/volume/
+
+# Forgejo runner
+.runner-home/
+
+# Terraform state & lock
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# TLS/keys
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
