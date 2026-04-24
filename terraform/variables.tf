@@ -1,7 +1,7 @@
 variable "proxmox_endpoint" {
   description = "Proxmox VE API URL"
   type        = string
-  default     = "https://192.168.100.254:8006"
+  default     = "https://REDACTED_PROXMOX_HOST:8006"
 }
 
 variable "proxmox_user" {
@@ -103,12 +103,12 @@ variable "network_config" {
     client_subnet    = "203.0.113"
     dmz_subnet       = "203.0.113"
     pg_subnet        = "203.0.113"
-    nameserver       = "10.10.20.10"
-    mgmt_gateway     = "10.10.20.1"
-    svc_gateway      = "10.10.20.1"
-    collab_gateway   = "10.10.20.1"
-    client_gateway   = "10.10.20.1"
-    dmz_gateway      = "10.10.20.1"
+    nameserver       = "203.0.113.110"
+    mgmt_gateway     = "203.0.113.101"
+    svc_gateway      = "203.0.113.101"
+    collab_gateway   = "203.0.113.101"
+    client_gateway   = "203.0.113.101"
+    dmz_gateway      = "203.0.113.101"
     wan_interface    = "vmbr0"
   }
 }

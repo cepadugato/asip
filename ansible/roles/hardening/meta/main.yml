@@ -1,0 +1,25 @@
+---
+galaxy_info:
+  author: ASIP Team
+  description: ANSSI/CIS L1 Hardening for LXC containers and Proxmox VE hosts
+  company: ASIP
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bookworm
+        - bullseye
+  galaxy_tags:
+    - hardening
+    - security
+    - anssi
+    - cis
+    - lxc
+    - proxmox
+
+dependencies: []

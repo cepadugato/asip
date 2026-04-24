@@ -66,12 +66,18 @@ Deux couches de filtering sont appliquées simultanément :
 
 ## Hardening ANSSI (CIS Benchmark)
 
-Le rôle Ansible `hardening` applique les contrôles suivants à toutes les VMs :
+Le durcissement est assuré par **deux rôles Ansible complémentaires** :
 
-### Kernel (sysctl)
+1. **`infra-proxmox/hardening`** (BASE) — SSH, auditd, AppArmor, UFW, pwquality, CrowdSec, mount options, sysctl réseau, package removal
+2. **`asip/hardening`** (COMPLÉMENT) — pam_faillock, AIDE, auditd immutable, SUID audit, SSH ANSSI, journald, banner, unattended-upgrades
+3. **`asip/hardening/host-pve.yml`** (PVE HOST ONLY) — kernel.* sysctl, module blacklist, GRUB, coredumps
+
+> **Note LXC** : Les conteneurs LXC partagent le noyau du host Proxmox. Les paramètres `kernel.*`, `fs.protected_*` et les blacklists de modules ne peuvent être configurés que sur le PVE host via `--tags host-hardening --limit pve`.
+
+### Kernel (sysctl) — Conteneurs LXC (namespaced)
 
 ```
-# Réseau
+# Réseau (infra-proxmox base)
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
@@ -82,67 +88,134 @@ net.ipv4.conf.all.log_martians = 1
 net.ipv4.conf.default.log_martians = 1
 net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
-
-# Mémoire
-kernel.randomize_va_space = 2           # ASLR complet
-fs.suid_dumpable = 0                     # Pas de core dumps SUID
-
-# Réseau durci
 net.ipv4.tcp_syncookies = 1
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
+
+# Mémoire (infra-proxmox base)
+fs.suid_dumpable = 0                     # Pas de core dumps SUID
+
+# Réseau durci (ASIP complément)
+net.ipv4.conf.all.secure_redirects = 0   # ANSSI — pas de redirects sécurisés
+net.ipv4.conf.default.secure_redirects = 0
+net.ipv4.tcp_timestamps = 0              # ANSSI — timestamps TCP off
+net.ipv4.conf.all.bootp_relay = 0
+net.ipv4.conf.default.bootp_relay = 0
+net.ipv4.conf.all.proxy_arp = 0
+net.ipv4.conf.default.proxy_arp = 0
+```
+
+### Kernel (sysctl) — PVE Host uniquement
+
+```
+# Ces paramètres ne sont PAS namespaced dans LXC
+# Ils doivent être configurés sur le Proxmox VE host
+kernel.randomize_va_space = 2           # ASLR complet
+kernel.dmesg_restrict = 1               # Restriction dmesq
+kernel.kptr_restrict = 2                # Restriction pointeurs noyau
+fs.protected_hardlinks = 1              # Protection liens durs
+fs.protected_symlinks = 1               # Protection liens symboliques
+fs.protected_fifos = 2                  # Protection fifos
+fs.protected_regular = 2                # Protection fichiers regular
+dev.tty.ldisc_autoload = 0              # Désactive autoload TTY
 ```
 
 ### SSH
 
-| Paramètre | Valeur | Raison |
-|-----------|--------|--------|
-| `Port` | 22 (ou custom) | Non-standard en option |
-| `PermitRootLogin` | `no` | Pas de login root direct |
-| `PasswordAuthentication` | `no` | Clés ed25519 uniquement |
-| `PermitEmptyPasswords` | `no` | Pas de mots de passe vides |
-| `MaxAuthTries` | 3 | Anti brute-force |
-| `MaxSessions` | 3 | Limite les sessions simultanées |
-| `X11Forwarding` | `no` | Pas de forwarding X11 |
-| `ClientAliveInterval` | 300 | Détection sessions inactives |
-| `ClientAliveCountMax` | 2 | Timeout après 10 min d'inactivité |
-| `Ciphers` | chacha20,aes256-gcm | Seuls les chiffrements modernes |
-| `MACs` | hmac-sha2-512,hmac-sha2-256 | Codes d'authentification forts |
-| `KexAlgorithms` | curve25519-sha256,nistp384 | Échange de clés robuste |
-| `TrustedUserCAKeys` | SSH CA step-ca | Certificats SSH via PKI interne |
+| Paramètre | Valeur | Rôle | Norme |
+|-----------|--------|------|-------|
+| `Port` | 22 (ou custom) | Base | Non-standard en option |
+| `PermitRootLogin` | `no` | Base | ANSSI |
+| `PasswordAuthentication` | `no` | Base | ANSSI — clés ed25519 uniquement |
+| `PermitEmptyPasswords` | `no` | Base | ANSSI |
+| `MaxAuthTries` | 3 | Base | ANSSI — anti brute-force |
+| `MaxSessions` | 3 | Base | ANSSI |
+| `X11Forwarding` | `no` | Base | ANSSI |
+| `ClientAliveInterval` | 300 | Base | ANSSI |
+| `ClientAliveCountMax` | 2 | Base | ANSSI |
+| `Ciphers` | chacha20,aes256-gcm | Base | ANSSI |
+| `MACs` | hmac-sha2-512,hmac-sha2-256 | Base | ANSSI |
+| `KexAlgorithms` | curve25519-sha256 | Base | ANSSI |
+| `TrustedUserCAKeys` | SSH CA step-ca | Base | PKI interne |
+| `HostbasedAuthentication` | `no` | **ASIP** | ANSSI GCR |
+| `IgnoreRhosts` | `yes` | **ASIP** | ANSSI GCR |
+| `PermitUserEnvironment` | `no` | **ASIP** | ANSSI GCR |
+| `MaxStartups` | `10:30:60` | **ASIP** | CIS 5.2.14 |
+| `StrictModes` | `yes` | **ASIP** | CIS 5.2.13 |
 
 ### Authentification
 
-| Contrôle | Valeur | Norme |
-|----------|--------|-------|
-| `PASS_MAX_DAYS` | 90 | ANSSI — rotation mots de passe |
-| `PASS_MIN_DAYS` | 7 | ANSSI — pas de changement immédiat |
-| `PASS_WARN_AGE` | 14 | ANSSI — préavis d'expiration |
-| `ENCRYPT_METHOD` | SHA512 | ANSSI — hachage robuste |
-| `minlen` (pwquality) | 14 | ANSSI — longueur minimum |
-| `minclass` (pwquality) | 4 | ANSSI — 4 classes de caractères |
-| `dcredit/ucredit/lcredit/ocredit` | -1 chacune | Au moins 1 de chaque type |
-| `maxrepeat` | 3 | Pas plus de 3 caractères identiques consécutifs |
-| `faillock` | 5 tentatives → verrouillage 900s | Anti brute-force PAM |
+| Contrôle | Valeur | Rôle | Norme |
+|----------|--------|------|-------|
+| `PASS_MAX_DAYS` | 90 | Base | ANSSI — rotation |
+| `PASS_MIN_DAYS` | 7 | Base | ANSSI |
+| `PASS_WARN_AGE` | 14 | Base | ANSSI |
+| `ENCRYPT_METHOD` | SHA512 | Base | ANSSI |
+| `minlen` (pwquality) | 14 | Base | ANSSI |
+| `minclass` (pwquality) | 4 | Base | ANSSI |
+| `dcredit/ucredit/lcredit/ocredit` | -1 | Base | ANSSI |
+| `maxrepeat` | 3 | Base | ANSSI |
+| `pam_faillock` deny | 5 | **ASIP** | CIS 5.2.2 — lockout après 5 échecs |
+| `pam_faillock` unlock_time | 900s | **ASIP** | CIS 5.2.2 |
+| `pam_faillock` even_deny_root | true | **ASIP** | CIS 5.2.2 |
+| `pam_pwhistory` remember | 5 | **ASIP** | CIS 5.3.3 — anti-reuse |
+
+### SUID/SGID (ASIP)
+
+Les binaires SUID suivants sont dépouillés de leur bit SUID :
+
+| Binaire | Raison |
+|---------|--------|
+| `/usr/bin/chsh` | Pas de changement shell via SUID |
+| `/usr/bin/chfn` | Pas de changement finger via SUID |
+| `/usr/bin/newgrp` | Pas de changement groupe via SUID |
+| `/usr/bin/gpasswd` | Pas de gestion groupe via SUID |
+| `/usr/bin/mount` | Pas de montage utilisateur |
+| `/usr/bin/umount` | Pas de démontage utilisateur |
+| `/usr/bin/passwd` | Géré via PAM, bit SUID retiré si policy locale |
+| `/usr/bin/su` | Accès via sudo uniquement |
+| `/usr/bin/pkexec` | PolicyKit exploit (CVE historiques) |
+| `/usr/lib/openssh/ssh-keysign` | Pas besoin SUID avec certificats |
 
 ### Filesystem
 
-| Montage | Options | Raison |
-|---------|---------|--------|
-| `/tmp` | `rw,nosuid,nodev,noexec,mode=1777,size=2G` | tmpfs, pas d'exécution |
-| `/var/tmp` | `rw,nosuid,nodev,noexec` | Pas d'exécution |
-| `/home` | `rw,nosuid,nodev` | Pas de SUID dans les homes |
-| `/var/log` | `rw,nosuid,nodev,noexec` | Logs non-exécutables |
+| Montage | Options | Rôle | Raison |
+|---------|---------|------|--------|
+| `/tmp` | `rw,nosuid,nodev,noexec,mode=1777,size=2G` | Base | tmpfs, pas d'exécution |
+| `/var/tmp` | `rw,nosuid,nodev,noexec` | Base | Pas d'exécution |
+| `/home` | `rw,nosuid,nodev` | Base | Pas de SUID dans les homes |
 
 ### Audit et logging
 
-| Outil | Configuration | Usage |
-|-------|---------------|-------|
-| `auditd` | Règles CIS (login, mount, sudo, /etc/passwd, /etc/shadow, réseau) | Traçabilité complète |
-| `rsyslog` | Forward central vers ad-server | Centralisation des logs |
-| `logrotate` | Rotation 30 jours | Prévention saturation disque |
-| `AIDE` | Baseline post-deploy, check quotidien | Détection de modification de fichiers |
-| `AppArmor` | Enforce mode, profils par service | Confinement des processus |
+| Outil | Configuration | Rôle | Usage |
+|-------|---------------|------|-------|
+| `auditd` | Règles CIS (login, mount, sudo, /etc/passwd, /etc/shadow, réseau) | Base | Traçabilité complète |
+| `auditd` | Flag `-e 2` (immutable) | **ASIP** | Règles non modifiables sans reboot |
+| `rsyslog` | Forward central vers ad-server | Base | Centralisation des logs |
+| `logrotate` | Rotation 30 jours | Base | Prévention saturation |
+| `AIDE` | Baseline post-deploy, check quotidien (4h00) | **ASIP** | Détection modification fichiers |
+| `AppArmor` | Enforce mode, profils par service | Base | Confinement processus |
+| `journald` | Storage=persistent, SystemMaxUse=500M | **ASIP** | Logs persistants + taille limitée |
+
+### Login banner
+
+Le rôle ASIP déploie un avertissement légal dans `/etc/issue` et `/etc/issue.net` conforme aux exigences ANSSI/CIS.
+
+### Mises à jour automatiques
+
+`unattended-upgrades` est configuré pour appliquer uniquement les mises à jour de sécurité (`${distro_id}:${distro_codename}-security`), sans reboot automatique.
+
+### Module blacklist (PVE host)
+
+Les modules suivants sont bloqués sur le Proxmox VE host :
+
+| Module | Raison | Norme |
+|--------|--------|-------|
+| `usb-storage` | Pas de stockage USB | CIS 3.5 |
+| `dccp` | Protocole réseau rare | CIS 3.5 |
+| `sctp` | Protocole réseau rare | CIS 3.5 |
+| `rds` | Protocole réseau rare | CIS 3.5 |
+| `tipc` | Protocole réseau rare | CIS 3.5 |
 
 ---
 

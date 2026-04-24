@@ -17,12 +17,12 @@ jobs:
       - name: Checkout
         run: |
           rm -rf /tmp/asip-ci
-          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@192.168.100.1:3000/git/asip.git /tmp/asip-ci
+          git clone --depth=1 http://git:${{ secrets.GIT_TOKEN }}@REDACTED_GATEWAY_IP:3000/git/asip.git /tmp/asip-ci
 
       - name: Check watchdog status (self-check)
         run: |
           mkdir -p /tmp/asip-ci/goss-results
-          for host_ip in 192.168.100.19; do
+          for host_ip in REDACTED_WATCHDOG_IP; do
             curl -sf "http://${host_ip}:8080/status" > "/tmp/asip-ci/goss-results/${host_ip}.json" 2>/dev/null || echo '{}' > "/tmp/asip-ci/goss-results/${host_ip}.json"
           done
 

@@ -1,20 +1,35 @@
 ---
 # ASIP Site Playbook
-# Extends infra-proxmox/ansible/site.yml with ASIP-specific roles
-# References existing roles via relative path
+# Architecture:
+#   1. Import infra-proxmox/ansible/site.yml → base hardening (SSH, auditd, AppArmor, UFW, pwquality)
+#   2. Apply ASIP hardening role → ANSSI/CIS L1 compliance (faillock, AIDE, immutable audit, SUID, etc.)
+#   3. ASIP-specific roles (mcp-watchdog, hybrid-storage)
+#
+# Usage:
+#   Full deploy:         ansible-playbook site.yml
+#   Container hardening: ansible-playbook site.yml --tags hardening-container
+#   PVE host hardening:  ansible-playbook site.yml --tags host-hardening --limit pve
+#   ASIP roles only:    ansible-playbook site.yml --tags asip
 
-- name: Hardening - CIS Benchmark for all hosts
+- name: Hardening — Base CIS Benchmark (infra-proxmox)
   import_playbook: ../../infra-proxmox/ansible/site.yml
-  tags: [hardening]
+  tags: [hardening, hardening-base]
 
-- name: ASIP - MCP Watchdog Agent
+- name: Hardening — ASIP ANSSI/CIS L1 Compliance (containers + PVE host)
+  hosts: all
+  become: true
+  tags: [hardening, hardening-asip]
+  roles:
+    - role: hardening
+
+- name: ASIP — MCP Watchdog Agent
   hosts: mcp_watchdogs
   become: true
   tags: [mcp-watchdog, asip, autonomous-ops]
   roles:
     - role: mcp-watchdog
 
-- name: ASIP - Hybrid Storage (rclone + LocalStack S3)
+- name: ASIP — Hybrid Storage (rclone + LocalStack S3)
   hosts: vault_servers:collab_servers:mcp_watchdogs
   become: true
   tags: [hybrid-storage, asip, simulate]

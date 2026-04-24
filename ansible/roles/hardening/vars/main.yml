@@ -1,0 +1,17 @@
+---
+# ASIP Hardening Role — OS-specific variables
+# Ubuntu 22.04 (jammy) defaults
+
+# Path to faillock configuration
+faillock_conf_path: "/etc/security/faillock.conf"
+
+# Path to PAM common files
+pam_common_auth_path: "/etc/pam.d/common-auth"
+pam_common_account_path: "/etc/pam.d/common-account"
+pam_common_password_path: "/etc/pam.d/common-password"
+
+# AIDE binary path
+aide_bin_path: "/usr/bin/aide"
+aideinit_bin_path: "/usr/sbin/aideinit"
+
+# SUID blacklist is defined in defaults/main.yml
