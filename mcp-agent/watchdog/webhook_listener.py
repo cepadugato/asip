@@ -26,10 +26,9 @@ async def lifespan(app_instance: FastAPI):
     if os.path.exists(config_path):
         with open(config_path) as f:
             cfg = yaml.safe_load(f)
-        wd_cfg = cfg.get("watchdog", {})
         state_engine = StateEngine(state_dir="/var/lib/asip/watchdog")
-        remediation_cfg = wd_cfg.get("remediation", {})
-        remediation_cfg["log_dir"] = wd_cfg.get("logging", {}).get("file", "/var/log/watchdog").rsplit("/", 1)[0]
+        remediation_cfg = cfg.get("remediation", {})
+        remediation_cfg["log_dir"] = cfg.get("logging", {}).get("dir", "/var/log/watchdog")
         remediation_engine = RemediationEngine(config=remediation_cfg, state=state_engine)
         logger.info(f"Watchdog engines initialized from {config_path}")
     else:
@@ -97,8 +96,6 @@ async def manual_remediate(host: str, request: Request):
 def _classify_severity(failed_count: int, failed_checks: list) -> str:
     if failed_count >= 4:
         return "high"
-    elif failed_count >= 2:
-        return "medium"
     return "low"
 
 
@@ -111,9 +108,11 @@ def _determine_tags(failed_checks: list) -> str:
             if "sshd_config" in resource or "ssh" in resource:
                 tags.add("hardening")
             elif "service" in resource:
-                tags.add("")
+                tags.add("service")
         if check_type == "service":
-            tags.add("")
+            tags.add("service")
+    # Remove empty strings
+    tags.discard("")
     if not tags:
         return "hardening"
-    return ",".join(tags)
+    return ",".join(sorted(tags))

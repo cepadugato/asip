@@ -153,7 +153,7 @@ jobs:
         run: |
           # Récupérer les résultats Goss depuis chaque VM
           mkdir -p goss-results
-          for host in 192.0.2.19 203.0.113.10 203.0.113.60; do
+          for host in 203.0.113.50 203.0.113.10 203.0.113.60; do
             scp -o StrictHostKeyChecking=no ansible@${host}:/var/log/goss/goss-results.json \
               goss-results/${host}.json 2>/dev/null || echo "{}" > goss-results/${host}.json
           done
@@ -295,36 +295,6 @@ jobs:
 
 ---
 
-## Branch Protection
-
-### Configuration Forgejo recommandée
-
-Sur le repo `asip`, configurer les protections de branche sur `main` :
-
-| Protection | Valeur | Raison |
-|-----------|--------|--------|
-| Require PR | Oui | Pas de push direct sur main |
-| Require passing checks | security-scan, drift-check | Bloque si vulnérabilité |
-| Require review | 1 approbation | Contrôle humain |
-| Allow force push | Non | Jamais |
-| Allow delete | Non | Jamais |
-
-### Workflow de développement
-
-```
-feature/xxx  →  PR  →  Checks (security + drift)  →  Review  →  Merge → main
-                    │                                     │
-                    ├─ security-scan.yml  (PASSED?)        │
-                    ├─ drift-check.yml    (PASSED?)        │
-                    ├─ terraform plan     (PREVIEW?)       │
-                    └─ ansible --check    (PREVIEW?)       │
-                                                          │
-                                                    Auto-deploy
-                                                    (terraform + ansible)
-```
-
----
-
 ## Forgejo Runner
 
 ### Architecture actuelle
@@ -436,9 +406,78 @@ Les 4 workflows sont actuellement **tous verts** (passing) :
 
 Les problèmes suivants ont été résolus lors de la mise en service du pipeline :
 
-| Problème | Solution | Détail |
+| Probleme | Solution | Detail |
 |----------|----------|--------|
-| Installation de `tflocal` | `pipx install terraform-local` | `pip3 install` ne fonctionne pas correctement dans le container CI ; `pipx` est le paquet officiellement recommandé |
-| Endpoint LocalStack dans Terraform | `AWS_ENDPOINT_URL` | Variable d'environnement standard AWS utilisée par `tflocal` ; `LOCALSTACK_ENDPOINT` n'est pas reconnue par le provider AWS |
-| Roles Ansible introuvables en CI | `ANSIBLE_ROLES_PATH=roles` | Ansible ne trouve pas les rôles locaux sans cette variable d'environnement ; à définir sur chaque appel `ansible-playbook` |
+| Installation de `tflocal` | `pipx install terraform-local` | `pip3 install` ne fonctionne pas correctement dans le container CI ; `pipx` est le paquet officiellement recommande |
+| Endpoint LocalStack dans Terraform | `AWS_ENDPOINT_URL` | Variable d'environnement standard AWS utilisee par `tflocal` ; `LOCALSTACK_ENDPOINT` n'est pas reconnue par le provider AWS |
+| Roles Ansible introuvables en CI | `ANSIBLE_ROLES_PATH=roles` | Ansible ne trouve pas les roles locaux sans cette variable d'environnement ; a definir sur chaque appel `ansible-playbook` |
 | `aws_caller_identity` data source en LocalStack | `SERVICES=s3,iam,sts` | LocalStack doit inclure le service `sts` pour que la data source `aws_caller_identity` fonctionne (sinon erreur 500) |
+
+---
+
+## Branch Protection
+
+### Configuration requise sur `main`
+
+Dans Forgejo (Settings -> Repository -> Settings -> Branch Protection), configurer :
+
+| Protection | Valeur | Justification |
+|-----------|--------|--------------|
+| Enable Branch Protection | Oui | Empeche les pushs directs |
+| Protected File Patterns | `terraform/**`, `ansible/**`, `.forgejo/workflows/**`, `mcp-agent/**` | Fichiers critiques immuables sans PR |
+| Required Approvals | 1 | Revue humaine obligatoire |
+| Dismiss stale approvals | Oui | Nouveau commit = nouvelle revue |
+| Require signed commits | Oui | Tracabilite GPG |
+| Block merge on failing checks | Oui | Bloque si CI echoue |
+| Status Checks | security-scan, drift-check, terraform-plan, ansible-check | Seuls les checks requis passent |
+| Allow force push | Non | Jamais de force push sur prod |
+| Allow deletions | Non | Jamais de suppression de branche |
+
+### Workflow de developpement
+
+```
+feature/xxx -> PR vers main -> CI checks -> Review -> Merge -> CD
+```
+
+| Etape | Outil | Validation |
+|-------|-------|------------|
+| 1. Feature branch | git checkout -b feature/xxx | Prefixe conventionnel |
+| 2. Commit | git commit -m "type: description" | Conventionnal commits |
+| 3. Push | git push origin feature/xxx | Declenche CI |
+| 4. PR | Forgejo UI | Template PR obligatoire |
+| 5. CI | Forgejo Actions | 4 workflows doivent passer |
+| 6. Review | Approbateur | Au moins 1 approve |
+| 7. Merge | Squash & merge | Historique lineaire |
+| 8. CD | Forgejo Actions auto | Deploy sur main |
+
+### Checklist PR Template
+
+Creer un fichier `.gitea/PULL_REQUEST_TEMPLATE.md` avec :
+
+```markdown
+## Description
+[Description courte des changements]
+
+## Type de changement
+- [ ] Bug fix (correction non-breaking)
+- [ ] Feature (ajout non-breaking)
+- [ ] Breaking change
+- [ ] Documentation
+
+## Checklist
+- [ ] Les tests CI passent (security-scan, drift-check)
+- [ ] Terraform plan a ete revu
+- [ ] Ansible --check a ete execute
+- [ ] La documentation est a jour
+- [ ] Les secrets ne sont pas en clair
+- [ ] Le code suit les standards ANSSI
+
+## Tests
+[Comment a ete teste ce changement]
+```
+
+## Impact
+
+- Securite : empeche le push direct de code non revu
+- Tracabilite : chaque changement est associe a une PR
+- Qualite : CI bloque les merges si checks echouent

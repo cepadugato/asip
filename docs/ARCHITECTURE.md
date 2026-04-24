@@ -16,7 +16,7 @@ A.S.I.P. étend l'infrastructure Proxmox existante (19 VMs + 1 LXC + 2 routeurs 
 | **opnsense-router-2** | WAN + 10-50 | 203.0.113.2 | 2 | 2G | 16G | 98 | Firewall/routeur backup (CARP) |
 | **bastion** | 10 | 203.0.113.5 | 1 | 1G | 16G | 100 | SSH bastion + step-ca CA |
 | **monitoring-server** | 10 | 203.0.113.20 | 2 | 4G | 64G | 101 | Prometheus, Grafana, Loki |
-| **mcp-watchdog** | — | 192.0.2.19 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04, pas VM QEMU) |
+| **mcp-watchdog** | — | 203.0.113.50 | 2 | 4G | 32G | 119 | Agent IA de surveillance + auto-remédiation (LXC Ubuntu 22.04, pas VM QEMU) |
 | **pg-node-1** | 10 | 203.0.113.30 | 2 | 4G | 64G | 102 | PostgreSQL Patroni nœud 1 |
 | **pg-node-2** | 10 | 203.0.113.31 | 2 | 4G | 64G | 103 | PostgreSQL Patroni nœud 2 |
 | **pg-node-3** | 10 | 203.0.113.32 | 2 | 4G | 64G | 104 | PostgreSQL Patroni nœud 3 |
@@ -151,7 +151,7 @@ Le stockage hybride est la brique "SIMULATE" d'A.S.I.P. Il simule un scénario d
 │  203.0.113.60          │  sync    │  Versioning+Lifecycle│
 │                       │          │                      │
 │  mcp-watchdog         │ ──────── │  IAM users/policies  │
-│  192.0.2.19      │  boto3   │  (asip-backup-agent) │
+│  203.0.113.50      │  boto3   │  (asip-backup-agent) │
 │  (LXC)                │          │                      │
 │                       │          │  asip-terraform-state│
 │                       │          │  (S3, AES256)         │
@@ -242,6 +242,6 @@ L'ordre de déploiement respecte les dépendances entre composants :
 | HTTPS | TCP:443 | Clients → DMZ | Proxy/LB | Accès services |
 | LDAPS | TCP:636 | Services → AD | ad-server | Auth LDAP |
 | Kerberos | TCP/UDP:88 | Toutes VMs → AD | ad-server | Auth SSO |
-| Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog (192.0.2.19) | Alertes drift |
+| Webhook | TCP:8080 | VMs → Watchdog | mcp-watchdog (203.0.113.50) | Alertes drift |
 | S3 API | TCP:4566 | VMs → LocalStack | localhost | Stockage hybride |
 | Forgejo API | TCP:3000 | Runner → Forgejo | PC hôte (localhost) | CI/CD |

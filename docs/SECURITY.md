@@ -339,7 +339,7 @@ Le rôle `goss-poll` déploie sur chaque VM :
 - Un fichier `/etc/goss/goss.yaml` décrivant l'état attendu
 - Un timer systemd `goss-poll.timer` (toutes les 5 minutes)
 - Un service `goss-poll.service` qui exécute la validation
-- Un webhook vers `http://192.0.2.19:8080/webhook/goss` en cas de drift
+- Un webhook vers `http://203.0.113.50:8080/webhook/goss` en cas de drift
 
 **Exemple de vérifications Goss :**
 

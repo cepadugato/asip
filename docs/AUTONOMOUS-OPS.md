@@ -17,7 +17,7 @@ Ce n'est pas une automatisation aveugle : l'agent évalue la sévérité, choisi
 │  ┌───────────────┐                    ┌──────────────────┐    │
 │  │  OpenCode     │  MCP Protocol      │  mcp-watchdog    │    │
 │  │  (Agent IA)   │ ◄────────────────► │  (LXC 119)       │    │
-│  │  GLM 5.1      │  (stdio JSON-RPC)  │  192.0.2.19 │    │
+│  │  GLM 5.1      │  (stdio JSON-RPC)  │  203.0.113.50 │    │
 │  │               │                    │  server.py :8080 │    │
 │  └───────────────┘                    └────────┬─────────┘    │
 │                                                 │              │
@@ -89,7 +89,7 @@ def poll_host(host_ip: str) -> DriftResult:
 Le webhook listener est un endpoint FastAPI qui reçoit les alertes push des VMs. Chaque VM configure son timer Goss pour POSTer vers le watchdog après chaque validation :
 
 ```
-POST http://192.0.2.19:8080/webhook/goss
+POST http://203.0.113.50:8080/webhook/goss
 Content-Type: application/json
 
 {

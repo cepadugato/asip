@@ -1,16 +1,16 @@
 output "mcp_watchdog_ip" {
-  description = "MCP Watchdog VM IP address"
+  description = "MCP Watchdog LXC IP address"
   value       = "203.0.113.50"
 }
 
 output "mcp_watchdog_vm_id" {
-  description = "MCP Watchdog VM ID"
-  value       = proxmox_virtual_environment_vm.mcp_watchdog.vm_id
+  description = "MCP Watchdog LXC CT ID"
+  value       = module.lxc_watchdog.lxc_id
 }
 
 output "mcp_watchdog_name" {
-  description = "MCP Watchdog VM name"
-  value       = proxmox_virtual_environment_vm.mcp_watchdog.name
+  description = "MCP Watchdog LXC hostname"
+  value       = module.lxc_watchdog.lxc_name
 }
 
 output "watchdog_endpoints" {
@@ -19,9 +19,4 @@ output "watchdog_endpoints" {
     webhook_url = "http://203.0.113.50:8080/webhook/goss"
     api_url     = "http://203.0.113.50:8080/status"
   }
-}
-
-output "firewall_security_group" {
-  description = "Watchdog firewall security group name"
-  value       = proxmox_virtual_environment_firewall_security_group.watchdog_service.name
 }

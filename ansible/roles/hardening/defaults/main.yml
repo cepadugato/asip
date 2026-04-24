@@ -137,8 +137,6 @@ hardening_login_defs_encrypt_method: "SHA512"
 # ============================================================================
 hardening_additional_packages:
   - aide
-  - aide-common
-  - libpam-faillock
   - libpam-pwquality
   - rsyslog
 

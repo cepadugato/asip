@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 from typing import Optional
 
+from watchdog.state import HostState
+
 logger = logging.getLogger("asip.watchdog.remediation")
 
 
@@ -29,7 +31,9 @@ class RemediationEngine:
     def remediate(self, host: str, tags: str = "") -> dict:
         logger.info(f"Starting remediation for {host} with tags='{tags}'")
 
-        self.state.record_remediation(host, self.state.hosts.get(host, HostState(host=host, ip="")).ip if host in self.state.hosts else "")
+        hs = self.state.hosts.get(host)
+        ip = hs.ip if hs else ""
+        self.state.record_remediation(host, ip)
 
         cmd = self._build_ansible_command(host, tags)
         log_file = os.path.join(
@@ -104,6 +108,3 @@ class RemediationEngine:
         entries.append(entry)
         with open(audit_file, "w") as f:
             json.dump(entries, f, indent=2)
-
-
-from watchdog.state import HostState
