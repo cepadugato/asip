@@ -20,13 +20,3 @@
   tags: [hybrid-storage, asip, simulate]
   roles:
     - role: hybrid-storage
-
-- name: ASIP - Forgejo Runner (rename from gitea-ci)
-  hosts: monitoring_servers
-  become: true
-  tags: [cicd, forgejo, runner]
-  roles:
-    - role: gitea-ci
-      vars:
-        gitea_server_url: "http://localhost:3000"
-        gitea_runner_name: "asip-forgejo-runner"
